@@ -1332,7 +1332,7 @@ export const UI_CSS = `
 .topbar h2 { margin: 0; font-size: clamp(18px, 4.8vw, 22px); letter-spacing: 0.04em; font-family: "Fraunces", Georgia, serif; }
 
 .cards {
-  display: grid; gap: 14px; min-height: 0; flex: 1;
+  display: grid; gap: 14px;  flex: 1;
   padding-bottom: 16px;
 }
 .world-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-content: start; }
