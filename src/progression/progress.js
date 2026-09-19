@@ -24,6 +24,8 @@ export function buyOrEquip(save, id) {
     if (save.data.gleams < item.cost) return { ok: false, reason: "gleams" };
     save.data.gleams -= item.cost;
     save.ownCosmetic(id);
+    save.data.equipped[item.type] = id;
+    save.persist();
     return { ok: true, bought: true, item };
   }
   save.data.equipped[item.type] = id;

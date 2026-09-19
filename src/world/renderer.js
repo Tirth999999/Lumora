@@ -1,5 +1,5 @@
 import { TILE, QUALITY_PRESETS } from "../config/game.js";
-import { rgba, lerp } from "../core/math.js";
+import { rgba, lerp, hexToRgb } from "../core/math.js";
 import { getPalette } from "../config/palette.js";
 
 export class Renderer {
@@ -84,7 +84,7 @@ export class Renderer {
     return { x: p.x, y: p.y - this.layout.depth };
   }
 
-  draw(world, session, effects, cosmetics, paletteId) {
+  draw(world, session, effects, cosmetics, paletteId, menuPal) {
     const ctx = this.ctx;
     const dpr = this.dpr;
     this.time += 0.016;
@@ -93,7 +93,9 @@ export class Renderer {
     const vw = this.canvas.clientWidth;
     const vh = this.canvas.clientHeight;
 
-    const pal = session ? getPalette(session.level) : getPalette({ palette: paletteId || "emberwake", index: 0, seed: 1 });
+    const pal = session
+      ? getPalette(session.level)
+      : menuPal || getPalette({ palette: paletteId || "emberwake", index: 0, seed: 1 });
 
     this.drawSky(ctx, vw, vh, pal, cosmetics);
     if (!session) {
@@ -210,8 +212,9 @@ export class Renderer {
         this.drawSealBlock(ctx, t.x, t.y, pal);
         continue;
       }
-      this.drawBlock(ctx, t.x, t.y, lit || glow > 0.15, pal, glow);
-      this.drawTileDecor(ctx, t.x, t.y, t.c, session, pal);
+      const isLit = lit || glow > 0.15;
+      this.drawBlock(ctx, t.x, t.y, isLit, pal, glow);
+      this.drawTileDecor(ctx, t.x, t.y, t.c, session, pal, isLit);
     }
   }
 
@@ -354,10 +357,15 @@ export class Renderer {
     ctx.lineTo(p.x, p.y + th);
     ctx.lineTo(p.x - hw, p.y + hh);
     ctx.closePath();
-    ctx.fillStyle = "#120818";
+    ctx.fillStyle = "#050308";
     ctx.fill();
-    ctx.strokeStyle = rgba("#c06090", 0.45 + 0.2 * Math.sin(this.time * 3));
-    ctx.lineWidth = 2;
+    // Bold dark outer barrier
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.95)";
+    ctx.lineWidth = 3.8;
+    ctx.stroke();
+    // Electric rift inner stroke
+    ctx.strokeStyle = "#ff4f8b";
+    ctx.lineWidth = 2.0;
     ctx.stroke();
     ctx.restore();
   }
@@ -365,43 +373,106 @@ export class Renderer {
   drawSealBlock(ctx, gx, gy, pal) {
     this.drawBlock(ctx, gx, gy, false, pal, 0);
     const p = this.cellToXY(gx, gy);
-    const r = this.layout.tw * 0.14;
-    ctx.strokeStyle = pal.accentDeep;
-    ctx.lineWidth = 2.5;
+    const r = this.layout.tw * 0.17;
+
+    // Dark protective backing disc so obstacle is 100% visible on any floor color
+    ctx.save();
+    ctx.fillStyle = "rgba(12, 8, 18, 0.78)";
     ctx.beginPath();
-    ctx.arc(p.x, p.y, r, 0, Math.PI * 1.7);
+    ctx.arc(p.x, p.y, r * 1.32, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Subtle pulsing warning rim
+    const pulse = 0.5 + 0.5 * Math.sin(this.time * 3.5);
+    ctx.strokeStyle = `rgba(255, 180, 50, ${0.25 + pulse * 0.25})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r * 1.25, 0, Math.PI * 2);
     ctx.stroke();
+
+    // High-visibility dual-stroke barrier ring (outer dark shield + luminous radiant ring)
+    const ringCol = "#ffc83b";
+    ctx.lineCap = "round";
+    // Outer dark silhouette stroke
+    ctx.strokeStyle = "rgba(10, 6, 14, 0.95)";
+    ctx.lineWidth = 4.4;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 1.72);
+    ctx.stroke();
+    // Inner luminous gold ring
+    ctx.strokeStyle = ringCol;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 1.72);
+    ctx.stroke();
+
+    // Ring terminal stop dots
+    ctx.fillStyle = "#fff4d0";
+    ctx.beginPath();
+    ctx.arc(p.x + r, p.y, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Central obstacle triangle with dark perimeter and radiant core
+    const tr = r * 0.44;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - tr * 1.15);
+    ctx.lineTo(p.x + tr * 0.95, p.y + tr * 0.75);
+    ctx.lineTo(p.x - tr * 0.95, p.y + tr * 0.75);
+    ctx.closePath();
+    // Triangle dark border
+    ctx.strokeStyle = "rgba(10, 6, 14, 0.98)";
+    ctx.lineWidth = 3.6;
+    ctx.stroke();
+    // Triangle luminous fill
+    ctx.fillStyle = ringCol;
+    ctx.fill();
+    // Triangle center highlight
+    ctx.fillStyle = "#fff8dc";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y + tr * 0.05, tr * 0.32, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
-  drawTileDecor(ctx, gx, gy, cell, session, pal) {
+  drawTileDecor(ctx, gx, gy, cell, session, pal, lit) {
     const p = this.cellToXY(gx, gy);
     const s = this.layout.tw * 0.12;
+    const tile = lit ? pal.floorLit : pal.floor;
+    const ink = contrastOn(tile, "#fff8ee", "#161018");
+    const mark = hazardOn(tile, pal.accent, pal.rim, pal.accentDeep);
     if (cell.t === TILE.WELL) {
       const on = session.flags.wells.has(cell.wellId);
-      ctx.strokeStyle = on ? pal.accent : pal.mute;
-      ctx.lineWidth = 2.5;
+      const col = on ? hazardOn(tile, "#5cf0e4", "#b8fff4", "#0c3c40") : mark;
+      strokeHalo(ctx, ink, col, 3.6, 2.2, () => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, s * 1.15, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      ctx.fillStyle = on ? col : rgba(ink, 0.35);
       ctx.beginPath();
-      ctx.arc(p.x, p.y, s * 1.1, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = on ? pal.accent : rgba(pal.mute, 0.35);
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, s * 0.45, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, s * 0.42, 0, Math.PI * 2);
       ctx.fill();
     }
     if (cell.t === TILE.ANCHOR) {
       const on = session.flags.anchors.has(cell.anchorId);
-      ctx.fillStyle = on ? pal.accent : rgba(pal.mute, 0.5);
+      ctx.fillStyle = on ? mark : rgba(ink, 0.55);
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 1.2;
       for (let i = 0; i < 5; i++) {
         const a = -Math.PI / 2 + i * ((Math.PI * 2) / 5) + (on ? this.time * 0.4 : 0);
         ctx.beginPath();
         ctx.ellipse(p.x + Math.cos(a) * s * 0.9, p.y + Math.sin(a) * s * 0.7, s * 0.35, s * 0.55, a, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
       }
       if (session.level.objective === "sequence") {
-        ctx.fillStyle = pal.ink;
+        ctx.fillStyle = ink;
         ctx.font = `700 ${Math.max(10, s * 1.4)}px Sora, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        ctx.strokeStyle = contrastOn(tile, "#1a1014", "#fff8ee");
+        ctx.lineWidth = 3;
+        ctx.strokeText(String((cell.order ?? 0) + 1), p.x, p.y + 0.5);
         ctx.fillText(String((cell.order ?? 0) + 1), p.x, p.y + 0.5);
       }
     }
@@ -409,57 +480,72 @@ export class Renderer {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(cell.vane === "ccw" ? -this.time : this.time);
-      ctx.fillStyle = pal.accentDeep;
+      ctx.fillStyle = "rgba(10, 6, 16, 0.65)";
       ctx.beginPath();
-      ctx.moveTo(s * 1.4, 0);
-      ctx.lineTo(-s * 0.7, s * 0.7);
-      ctx.lineTo(-s * 0.7, -s * 0.7);
+      ctx.arc(0, 0, s * 1.25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(s * 1.45, 0);
+      ctx.lineTo(-s * 0.72, s * 0.78);
+      ctx.lineTo(-s * 0.72, -s * 0.78);
       ctx.closePath();
+      ctx.strokeStyle = "rgba(10, 6, 16, 0.95)";
+      ctx.lineWidth = 3.2;
+      ctx.stroke();
+      ctx.fillStyle = "#ffe259";
       ctx.fill();
       ctx.restore();
     }
     if (cell.t === TILE.FOLD) {
       const on = session.flags.foldsActive;
-      ctx.strokeStyle = on ? pal.accent : pal.mute;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(p.x - s, p.y);
-      ctx.quadraticCurveTo(p.x, p.y - s * 1.2, p.x + s, p.y);
-      ctx.quadraticCurveTo(p.x, p.y + s * 1.2, p.x - s, p.y);
-      ctx.stroke();
+      const col = on ? mark : ink;
+      strokeHalo(ctx, ink, col, 3.2, 2, () => {
+        ctx.beginPath();
+        ctx.moveTo(p.x - s, p.y);
+        ctx.quadraticCurveTo(p.x, p.y - s * 1.2, p.x + s, p.y);
+        ctx.quadraticCurveTo(p.x, p.y + s * 1.2, p.x - s, p.y);
+        ctx.stroke();
+      });
     }
     if (cell.t === TILE.HEART) {
-      ctx.fillStyle = session.flags.heart ? pal.floorLit : pal.accentDeep;
+      ctx.fillStyle = session.flags.heart ? hazardOn(tile, "#ff6a88", "#ffc0d0", "#5a1020") : mark;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 1.6;
       const hs = s * 0.9;
       ctx.beginPath();
       ctx.moveTo(p.x, p.y + hs);
       ctx.bezierCurveTo(p.x - hs * 1.6, p.y - hs * 0.2, p.x - hs * 0.5, p.y - hs * 1.4, p.x, p.y - hs * 0.2);
       ctx.bezierCurveTo(p.x + hs * 0.5, p.y - hs * 1.4, p.x + hs * 1.6, p.y - hs * 0.2, p.x, p.y + hs);
       ctx.fill();
+      ctx.stroke();
     }
     if (cell.t === TILE.FRACTURE) {
-      ctx.strokeStyle = rgba(pal.accent, 0.7);
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.moveTo(p.x - s, p.y - s * 0.2);
-      ctx.lineTo(p.x - s * 0.1, p.y + s * 0.4);
-      ctx.lineTo(p.x + s * 0.4, p.y - s * 0.5);
-      ctx.lineTo(p.x + s, p.y + s * 0.2);
-      ctx.stroke();
+      strokeHalo(ctx, ink, hazardOn(tile, "#ff7040", "#ffd0a0", "#4a1810"), 3.2, 1.8, () => {
+        ctx.beginPath();
+        ctx.moveTo(p.x - s, p.y - s * 0.2);
+        ctx.lineTo(p.x - s * 0.1, p.y + s * 0.4);
+        ctx.lineTo(p.x + s * 0.4, p.y - s * 0.5);
+        ctx.lineTo(p.x + s, p.y + s * 0.2);
+        ctx.stroke();
+      });
     }
     if (cell.t === TILE.MIRROR) {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(0.4);
-      ctx.fillStyle = rgba("#e8fff8", 0.55);
-      ctx.strokeStyle = pal.rim;
-      ctx.lineWidth = 1.5;
+      const glass = hazardOn(tile, "#e8fff8", "#ffffff", "#143838");
+      ctx.fillStyle = glass;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, -s * 1.1);
-      ctx.lineTo(s * 0.7, s * 0.8);
-      ctx.lineTo(-s * 0.7, s * 0.8);
+      ctx.moveTo(0, -s * 1.15);
+      ctx.lineTo(s * 0.78, s * 0.82);
+      ctx.lineTo(-s * 0.78, s * 0.82);
       ctx.closePath();
       ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = mark;
+      ctx.lineWidth = 1.2;
       ctx.stroke();
       ctx.restore();
     }
@@ -468,13 +554,20 @@ export class Renderer {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(ang);
-      ctx.fillStyle = pal.accent;
+      ctx.fillStyle = "rgba(10, 6, 16, 0.65)";
       ctx.beginPath();
-      ctx.moveTo(s * 1.2, 0);
-      ctx.lineTo(-s * 0.7, s * 0.7);
-      ctx.lineTo(-s * 0.3, 0);
-      ctx.lineTo(-s * 0.7, -s * 0.7);
+      ctx.arc(0, 0, s * 1.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(s * 1.25, 0);
+      ctx.lineTo(-s * 0.72, s * 0.74);
+      ctx.lineTo(-s * 0.28, 0);
+      ctx.lineTo(-s * 0.72, -s * 0.74);
       ctx.closePath();
+      ctx.strokeStyle = "rgba(10, 6, 16, 0.95)";
+      ctx.lineWidth = 3.2;
+      ctx.stroke();
+      ctx.fillStyle = "#ffffff";
       ctx.fill();
       ctx.restore();
     }
@@ -631,6 +724,35 @@ export class Renderer {
 
 function mix(a, b, t) {
   return lerpColor(a, b, t);
+}
+
+function lum(hex) {
+  try {
+    const { r, g, b } = hexToRgb(hex);
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  } catch {
+    return 0.5;
+  }
+}
+
+function contrastOn(bg, light, dark) {
+  return lum(bg) > 0.48 ? dark : light;
+}
+
+function hazardOn(bg, preferred, light, dark) {
+  if (Math.abs(lum(bg) - lum(preferred)) >= 0.28) return preferred;
+  return contrastOn(bg, light, dark);
+}
+
+function strokeHalo(ctx, halo, color, outer, inner, draw) {
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = halo;
+  ctx.lineWidth = outer;
+  draw();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = inner;
+  draw();
 }
 
 function lerpColor(a, b, t) {

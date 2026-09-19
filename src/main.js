@@ -14,7 +14,8 @@ import { UI, UI_CSS } from "./ui/UI.js";
 import { syncAchievements, buyOrEquip } from "./progression/progress.js";
 import { cosmeticState } from "./player/cosmetics.js";
 import { DebugOverlay } from "./debug/debug.js";
-import { QUALITY } from "./config/game.js";
+import { QUALITY, PALETTES } from "./config/game.js";
+import { cyclePalette } from "./config/palette.js";
 
 export class Game {
   constructor() {
@@ -39,9 +40,11 @@ export class Game {
     this.completing = false;
     this.failT = 0;
     this.debug = new DebugOverlay(isDebug());
-    this.hudPad = { top: 72, bot: 16 };
+    this.hudPad = { top: 78, bot: 22 };
     this.raf = 0;
     this.last = 0;
+    this.themeT = 0;
+    this.menuPal = PALETTES.emberwake;
   }
 
   async start() {
@@ -225,8 +228,11 @@ export class Game {
 
   setSetting(k, v) {
     this.save.data.settings[k] = v;
+    if (k === "quality") {
+      this.save.data.settings.qualityManual = true;
+      this.effects = createEffects(QUALITY_PRESETS[v] || QUALITY_PRESETS.medium);
+    }
     this.save.persist();
-    if (k === "quality") this.effects = createEffects(QUALITY_PRESETS[v] || QUALITY_PRESETS.medium);
     this.audio.applySettings(this.save.data.settings, this.platform.muteFromPlatform);
   }
 
@@ -239,8 +245,11 @@ export class Game {
         this.analytics.track("cosmetic_unlocked", { id });
         this.ui.setToast(`Unlocked ${res.item.name}`);
         syncAchievements(this.save, { onAchieve: (a) => this.ui.setToast(a.name) });
+      } else if (res.equipped) {
+        this.ui.setToast(`Wearing ${res.item.name}`);
       }
     }
+    this.uiTick = (this.uiTick || 0) + 1;
     this.ui.render();
   }
 
@@ -349,15 +358,26 @@ export class Game {
     } else if (this.session) {
       this.effects.update(dt);
     }
+    this.themeT += dt;
+    this.menuPal = cyclePalette(this.themeT);
     this.ui.update(dt);
     this.layout();
+    const locked = this.fsm.is(
+      STATES.PLAYING,
+      STATES.PAUSED,
+      STATES.LEVEL_COMPLETE,
+      STATES.REWARD,
+      STATES.WORLD_INTRO,
+      STATES.LEVEL_SELECT
+    );
     const pal = this.session?.level.palette || this.selectedWorld || "emberwake";
     this.renderer.draw(
       null,
       this.fsm.is(STATES.PLAYING, STATES.PAUSED, STATES.LEVEL_COMPLETE, STATES.WORLD_INTRO) ? this.session : null,
       this.effects,
       cosmeticState(this.save),
-      pal
+      pal,
+      locked ? null : this.menuPal
     );
     if (this.debug.enabled && this.session) this.renderer.drawDebug(this.session, this.debug.showGrid, this.debug.showSol);
     this.debug.draw(this);
@@ -422,6 +442,8 @@ function autoQuality(save) {
 document.addEventListener(
   "touchmove",
   (e) => {
+    const t = e.target;
+    if (t && typeof t.closest === "function" && t.closest("#ui")) return;
     e.preventDefault();
   },
   { passive: false }

@@ -83,7 +83,7 @@ export class Session {
 
     if (!this.moving) return;
 
-    const speed = 11.8;
+    const speed = 6.2;
     this.t += dt * speed;
     while (this.t >= 1 && this.pathI < this.path.length - 1) {
       this.t -= 1;

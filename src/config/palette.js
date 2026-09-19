@@ -1,5 +1,5 @@
 import { PALETTES } from "./game.js";
-import { mulberry32, mixHex, lerp } from "../core/math.js";
+import { mulberry32, mixHex, lerp, easeInOut } from "../core/math.js";
 
 function hexToHsl(hex) {
   const n = hex.replace("#", "");
@@ -85,4 +85,32 @@ export function getPalette(level) {
   if (!level) return PALETTES.emberwake;
   if (level.paletteResolved) return level.paletteResolved;
   return resolvePalette(level.palette || level.worldId, level.index || 0, level.seed || 0);
+}
+
+export function mixPalettes(a, b, t) {
+  if (!a) return b;
+  if (!b || t <= 0) return { ...a };
+  if (t >= 1) return { ...b };
+  const out = { ...a };
+  for (const k of Object.keys(a)) {
+    if (typeof a[k] === "string" && a[k][0] === "#" && typeof b[k] === "string" && b[k][0] === "#") {
+      out[k] = mixHex(a[k], b[k], t);
+    }
+  }
+  return out;
+}
+
+const CYCLE_IDS = Object.keys(PALETTES);
+
+/** Smooth, continuous infinite loop across every diverse world palette. */
+export function cyclePalette(timeSec) {
+  const hold = 3.5;
+  const fade = 3.0;
+  const span = hold + fade;
+  const n = CYCLE_IDS.length;
+  const total = ((timeSec % (span * n)) + span * n) % (span * n);
+  const i = Math.floor(total / span) % n;
+  const local = total - i * span;
+  const t = local < hold ? 0 : easeInOut(Math.min(1, (local - hold) / fade));
+  return mixPalettes(PALETTES[CYCLE_IDS[i]], PALETTES[CYCLE_IDS[(i + 1) % n]], t);
 }

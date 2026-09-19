@@ -378,38 +378,48 @@ export const PALETTES = {
   },
 };
 
+export const COSMETIC_TYPE = {
+  body: "Nuri coat",
+  wake: "Wake trail",
+  mote: "Motes",
+  burst: "Bloom burst",
+  sky: "Sky veil",
+};
+
 export const COSMETICS = [
-  { id: "nuri-dawn", type: "body", name: "Dawnpelt", cost: 0, unlock: "start" },
-  { id: "nuri-tide", type: "body", name: "Tidecoat", cost: 40 },
-  { id: "nuri-dusk", type: "body", name: "Dusksilk", cost: 60 },
-  { id: "nuri-leaf", type: "body", name: "Leafglow", cost: 80 },
-  { id: "nuri-star", type: "body", name: "Stardown", cost: 100 },
-  { id: "wake-ribbon", type: "wake", name: "Soft Ribbon", cost: 0, unlock: "start" },
-  { id: "wake-petals", type: "wake", name: "Petal Drift", cost: 50 },
-  { id: "wake-sparks", type: "wake", name: "Spark Beads", cost: 70 },
-  { id: "mote-orbs", type: "mote", name: "Tiny Orbs", cost: 0, unlock: "start" },
-  { id: "mote-rings", type: "mote", name: "Halo Rings", cost: 45 },
-  { id: "burst-bloom", type: "burst", name: "Quiet Bloom", cost: 0, unlock: "start" },
-  { id: "burst-constellation", type: "burst", name: "Constellation", cost: 90 },
-  { id: "sky-still", type: "sky", name: "Still Dusk", cost: 0, unlock: "start" },
-  { id: "sky-aurora", type: "sky", name: "Lattice Aurora", cost: 75 },
+  { id: "nuri-dawn", type: "body", name: "Dawnpelt", cost: 0, unlock: "start", blurb: "Nuri’s warm starting coat." },
+  { id: "nuri-tide", type: "body", name: "Tidecoat", cost: 40, blurb: "Sea-glass pelt from Tidecrest." },
+  { id: "nuri-dusk", type: "body", name: "Dusksilk", cost: 60, blurb: "Violet silk from Duskveil nights." },
+  { id: "nuri-leaf", type: "body", name: "Leafglow", cost: 80, blurb: "Canopy light caught in fur." },
+  { id: "nuri-star", type: "body", name: "Stardown", cost: 100, blurb: "Starloom dust woven into a coat." },
+  { id: "wake-ribbon", type: "wake", name: "Soft Ribbon", cost: 0, unlock: "start", blurb: "A gentle trail behind each glide." },
+  { id: "wake-petals", type: "wake", name: "Petal Drift", cost: 50, blurb: "Petals that fall as you restore tiles." },
+  { id: "wake-sparks", type: "wake", name: "Spark Beads", cost: 70, blurb: "Tiny sparks bead along the wake." },
+  { id: "mote-orbs", type: "mote", name: "Tiny Orbs", cost: 0, unlock: "start", blurb: "Soft motes that hover near Nuri." },
+  { id: "mote-rings", type: "mote", name: "Halo Rings", cost: 45, blurb: "Thin rings that pulse with each step." },
+  { id: "burst-bloom", type: "burst", name: "Quiet Bloom", cost: 0, unlock: "start", blurb: "A small bloom when a well or beacon fires." },
+  { id: "burst-constellation", type: "burst", name: "Constellation", cost: 90, blurb: "Star-pricks scatter on a restore burst." },
+  { id: "sky-still", type: "sky", name: "Still Dusk", cost: 0, unlock: "start", blurb: "The original quiet sky." },
+  { id: "sky-aurora", type: "sky", name: "Lattice Aurora", cost: 75, blurb: "Northern light over every lattice." },
 ];
 
 export const ACHIEVEMENTS = [
-  { id: "first-wake", name: "First Wake", desc: "Restore your first lattice.", icon: "wake" },
-  { id: "ten-lattices", name: "Ten Lattices", desc: "Restore 10 lattices.", icon: "ten" },
-  { id: "fifty-lattices", name: "Fifty Lattices", desc: "Restore 50 lattices.", icon: "fifty" },
+  { id: "first-wake", name: "First Wake", desc: "Restore your first lattice.", icon: "wake", hue: "#ff9a4a", how: "Finish Emberwake 1." },
+  { id: "ten-lattices", name: "Ten Lattices", desc: "Restore 10 lattices across any worlds.", icon: "ten", hue: "#48d8d0", how: "Complete 10 unique levels." },
+  { id: "fifty-lattices", name: "Fifty Lattices", desc: "Restore 50 lattices across any worlds.", icon: "fifty", hue: "#88a8ff", how: "Complete 50 unique levels." },
   ...WORLDS.map((w) => ({
     id: `world-${w.id}`,
     name: `${w.name} Keeper`,
-    desc: `Complete every lattice in ${w.name}.`,
+    desc: `Restore every lattice in ${w.name}.`,
     icon: w.id,
+    hue: w.hue,
+    how: `Clear all ${w.levels} levels in ${w.name}.`,
   })),
-  { id: "efficient", name: "Quiet Path", desc: "Finish within the quiet-glide hint.", icon: "quiet" },
-  { id: "daily", name: "Day Weaver", desc: "Complete a Dayweave lattice.", icon: "daily" },
-  { id: "collector", name: "Wardrobe", desc: "Unlock 6 cosmetics.", icon: "wardrobe" },
-  { id: "well-tender", name: "Well Tender", desc: "Charge a well for the first time.", icon: "well" },
-  { id: "fold-step", name: "Fold Step", desc: "Travel through a foldgate.", icon: "fold" },
+  { id: "efficient", name: "Quiet Path", desc: "Finish a lattice within the quiet-glide hint.", icon: "quiet", hue: "#e0b050", how: "Beat a level under the move hint." },
+  { id: "daily", name: "Day Weaver", desc: "Complete today’s Dayweave lattice.", icon: "daily", hue: "#80e0ff", how: "Enter Dayweave from the menu and finish it." },
+  { id: "collector", name: "Wardrobe", desc: "Unlock 6 looks in the Collection.", icon: "wardrobe", hue: "#c890f0", how: "Buy or start with 6 cosmetics." },
+  { id: "well-tender", name: "Well Tender", desc: "Charge a drinking well for the first time.", icon: "well", hue: "#7ef0e0", how: "Stop on a well tile in Tidecrest." },
+  { id: "fold-step", name: "Fold Step", desc: "Travel through a foldgate.", icon: "fold", hue: "#88a8ff", how: "Glide into a paired gate in Starloom." },
 ];
 
 export const QUALITY_PRESETS = {
