@@ -14,9 +14,14 @@ import {
 const DIR = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
 
 export class Session {
-  constructor(level) {
+  constructor(level, speedMultiplier = 1) {
     this.level = level;
+    this.speedMultiplier = speedMultiplier;
     this.reset();
+  }
+
+  setSpeedMultiplier(s) {
+    this.speedMultiplier = s;
   }
 
   reset() {
@@ -43,13 +48,19 @@ export class Session {
     this.celebrating = false;
     this.wakeCells = new Set();
     this.events = [];
+    this.inactiveTime = 0;
+    this.stuck = false;
+    this.noProgressMoves = 0;
+    this.stopHistory = [];
     applyVisit(l, this.flags, this.px, this.py);
     applyStop(l, this.flags, this.px, this.py);
     this.wakeCells.add(`${this.px},${this.py}`);
+    this.lastCoverage = coverageCount(l, this.flags).cur;
   }
 
   tryMove(dir) {
     if (this.moving || this.complete || this.failed) return false;
+    this.inactiveTime = 0;
     const slide = simulateSlide(this.level, this.px, this.py, dir, this.flags);
     if (slide.path.length < 2) {
       this.bounce = 1;
@@ -81,9 +92,14 @@ export class Session {
       return;
     }
 
-    if (!this.moving) return;
+    if (!this.moving) {
+      if (!this.failed) {
+        this.inactiveTime += dt;
+      }
+      return;
+    }
 
-    const speed = 6.2;
+    const speed = 6.2 * (this.speedMultiplier || 1);
     this.t += dt * speed;
     while (this.t >= 1 && this.pathI < this.path.length - 1) {
       this.t -= 1;
@@ -130,10 +146,40 @@ export class Session {
       const cell = cellAt(this.level, this.px, this.py);
       if (cell.t === TILE.WELL) this.events.push({ type: "well" });
       this.events.push({ type: "stop" });
+
+      // Stuck & loop detection
+      const curCov = coverageCount(this.level, this.flags).cur;
+      const stopPos = `${this.px},${this.py}`;
+      this.stopHistory.push(stopPos);
+      if (this.stopHistory.length > 8) this.stopHistory.shift();
+
+      if (curCov > this.lastCoverage) {
+        this.lastCoverage = curCov;
+        this.noProgressMoves = 0;
+        this.stuck = false;
+      } else {
+        this.noProgressMoves = (this.noProgressMoves || 0) + 1;
+      }
+
+      let hasValidMoves = false;
+      for (const testDir of ["up", "down", "left", "right"]) {
+        const slide = simulateSlide(this.level, this.px, this.py, testDir, this.flags);
+        if (slide.path.length >= 2) {
+          hasValidMoves = true;
+          break;
+        }
+      }
+
+      const occurrences = this.stopHistory.filter((pos) => pos === stopPos).length;
+      if (!objectiveMet(this.level, this.flags) && (!hasValidMoves || (this.noProgressMoves >= 4 && occurrences >= 2))) {
+        this.stuck = true;
+      }
+
       if (objectiveMet(this.level, this.flags)) {
         this.complete = true;
         this.celebrating = true;
         this.completeT = 0;
+        this.stuck = false;
         this.events.push({ type: "complete" });
       }
     }

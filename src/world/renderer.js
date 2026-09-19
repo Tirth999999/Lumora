@@ -1,6 +1,7 @@
 import { TILE, QUALITY_PRESETS } from "../config/game.js";
 import { rgba, lerp, hexToRgb } from "../core/math.js";
 import { getPalette } from "../config/palette.js";
+import { simulateSlide } from "../gameplay/rules.js";
 
 export class Renderer {
   constructor(canvas) {
@@ -99,7 +100,6 @@ export class Renderer {
 
     this.drawSky(ctx, vw, vh, pal, cosmetics);
     if (!session) {
-      this.drawMenuOrb(ctx, vw, vh, pal);
       return;
     }
 
@@ -109,6 +109,9 @@ export class Renderer {
 
     if (session.complete) this.drawCompleteWash(ctx, vw, vh, pal, session.completeT);
     if (session.moves === 0 && !session.moving && session.level.hint) this.drawSwipeCue(ctx, session, pal);
+    if (!session.moving && !session.complete && (cosmetics?.showHint || session.inactiveTime > 3.5 || session.stuck)) {
+      this.drawPathHint(ctx, session, pal);
+    }
   }
 
   drawSky(ctx, vw, vh, pal, cosmetics) {
@@ -576,7 +579,8 @@ export class Renderer {
   drawNuri3D(ctx, session, pal, cosmetics) {
     const p = this.cellToXY(session.fx, session.fy);
     const s = this.layout.tw * 0.34;
-    const body = bodyColor(cosmetics?.body, pal);
+    const skinId = cosmetics?.body || "nuri-dawn";
+    const body = bodyColor(skinId, pal);
     const bob = Math.sin(this.time * 3.2) * 2 + session.bounce * 4;
 
     ctx.save();
@@ -590,36 +594,120 @@ export class Renderer {
     ctx.ellipse(0, s * 0.95, s * 0.65, s * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Glow halo
+    // Ambient glow halo
+    const haloGlow = skinId === "nuri-tide" ? "#48d8d0"
+      : skinId === "nuri-dusk" ? "#c890f0"
+      : skinId === "nuri-leaf" ? "#a8e050"
+      : skinId === "nuri-star" ? "#88a8ff"
+      : skinId === "nuri-pyra" ? "#ff5a36"
+      : skinId === "nuri-zephyr" ? "#54c8ff"
+      : skinId === "nuri-solas" ? "#f5b830"
+      : pal.accent;
+
     const halo = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.4);
-    halo.addColorStop(0, rgba(pal.accent, 0.35));
+    halo.addColorStop(0, rgba(haloGlow, 0.38));
     halo.addColorStop(1, "transparent");
     ctx.fillStyle = halo;
     ctx.beginPath();
     ctx.arc(0, 0, s * 1.4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Fins
-    ctx.fillStyle = mix(body, pal.accentDeep, 0.15);
-    ctx.beginPath();
-    ctx.ellipse(-s * 0.58, -s * 0.4, s * 0.3, s * 0.48, -0.55, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(s * 0.58, -s * 0.4, s * 0.3, s * 0.48, 0.55, 0, Math.PI * 2);
-    ctx.fill();
+    // Unique Character Appendages (Ears, Horns, Halos, Wings)
+    if (skinId === "nuri-tide") {
+      // Kora (Tide): Sleek bioluminescent aquatic fins
+      ctx.fillStyle = mix(body, "#60ffea", 0.4);
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.64, -s * 0.35, s * 0.22, s * 0.54, -0.65, 0, Math.PI * 2);
+      ctx.ellipse(s * 0.64, -s * 0.35, s * 0.22, s * 0.54, 0.65, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (skinId === "nuri-dusk") {
+      // Vesper (Dusk): Ethereal twilight phantom wings
+      ctx.fillStyle = mix(body, "#f2b0ff", 0.35);
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.68, -s * 0.45, s * 0.25, s * 0.55, -0.45, 0, Math.PI * 2);
+      ctx.ellipse(s * 0.68, -s * 0.45, s * 0.25, s * 0.55, 0.45, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (skinId === "nuri-leaf") {
+      // Sylva (Flora): Leaf sprout crests
+      ctx.fillStyle = mix(body, "#d4ff80", 0.3);
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.5, -s * 0.55, s * 0.18, s * 0.46, -0.4, 0, Math.PI * 2);
+      ctx.ellipse(s * 0.5, -s * 0.55, s * 0.18, s * 0.46, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#387818";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.5, -s * 0.25); ctx.lineTo(-s * 0.5, -s * 0.75);
+      ctx.moveTo(s * 0.5, -s * 0.25); ctx.lineTo(s * 0.5, -s * 0.75);
+      ctx.stroke();
+    } else if (skinId === "nuri-star") {
+      // Astra (Cosmos): Orbital stellar halo ring
+      ctx.strokeStyle = "rgba(200, 225, 255, 0.85)";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.ellipse(0, -s * 0.45, s * 0.96, s * 0.32, -0.15, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(s * 0.8, -s * 0.5, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (skinId === "nuri-pyra") {
+      // Pyra (Flame): Curved blazing flame horns
+      ctx.fillStyle = "#ffaa20";
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.4, -s * 0.35);
+      ctx.quadraticCurveTo(-s * 0.7, -s * 0.9, -s * 0.42, -s * 0.95);
+      ctx.quadraticCurveTo(-s * 0.2, -s * 0.7, -s * 0.15, -s * 0.35);
+      ctx.moveTo(s * 0.4, -s * 0.35);
+      ctx.quadraticCurveTo(s * 0.7, -s * 0.9, s * 0.42, -s * 0.95);
+      ctx.quadraticCurveTo(s * 0.2, -s * 0.7, s * 0.15, -s * 0.35);
+      ctx.fill();
+    } else if (skinId === "nuri-zephyr") {
+      // Zephyr (Gale): Swept feather wings
+      ctx.fillStyle = mix(body, "#ffffff", 0.45);
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.7, -s * 0.25, s * 0.22, s * 0.58, -0.85, 0, Math.PI * 2);
+      ctx.ellipse(s * 0.7, -s * 0.25, s * 0.22, s * 0.58, 0.85, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (skinId === "nuri-solas") {
+      // Solas (Solar): Radiant sunburst crown
+      ctx.strokeStyle = "#ffe260";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = -2; i <= 2; i++) {
+        const ang = (i * 0.3) - Math.PI / 2;
+        const rx = Math.cos(ang) * s * 0.9;
+        const ry = Math.sin(ang) * s * 0.9;
+        ctx.moveTo(rx * 0.65, ry * 0.65);
+        ctx.lineTo(rx, ry);
+      }
+      ctx.stroke();
+    } else {
+      // Nuri (Origin): Warm rounded bunny/fox ears with soft inner glow
+      ctx.fillStyle = mix(body, pal.accentDeep, 0.15);
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.58, -s * 0.4, s * 0.28, s * 0.5, -0.55, 0, Math.PI * 2);
+      ctx.ellipse(s * 0.58, -s * 0.4, s * 0.28, s * 0.5, 0.55, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffe2c8";
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.56, -s * 0.4, s * 0.13, s * 0.32, -0.55, 0, Math.PI * 2);
+      ctx.ellipse(s * 0.56, -s * 0.4, s * 0.13, s * 0.32, 0.55, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    // Body sphere with lighting
+    // Body sphere with smooth ambient lighting
     const grd = ctx.createRadialGradient(-s * 0.2, -s * 0.25, s * 0.08, 0, 0, s);
     grd.addColorStop(0, "#fff8ec");
-    grd.addColorStop(0.4, body);
-    grd.addColorStop(1, pal.accentDeep);
+    grd.addColorStop(0.42, body);
+    grd.addColorStop(1, mix(body, "#100818", 0.45));
     ctx.fillStyle = grd;
     ctx.beginPath();
     ctx.ellipse(0, 0, s * 0.78, s * 0.9, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Specular
-    ctx.fillStyle = rgba("#fff", 0.4);
+    // Specular shine
+    ctx.fillStyle = rgba("#fff", 0.45);
     ctx.beginPath();
     ctx.ellipse(-s * 0.18, -s * 0.28, s * 0.26, s * 0.14, -0.4, 0, Math.PI * 2);
     ctx.fill();
@@ -637,8 +725,8 @@ export class Renderer {
     ctx.fill();
 
     if (session.celebrating) {
-      ctx.strokeStyle = pal.accent;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = haloGlow;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(0, s * 0.22, s * 0.16, 0.15, Math.PI - 0.15);
       ctx.stroke();
@@ -720,6 +808,64 @@ export class Renderer {
       ctx.fillText(session.level.solution.join(" → "), 12, this.canvas.clientHeight - 8);
     }
   }
+  drawPathHint(ctx, session, pal) {
+    if (!session || session.moving || session.complete || session.failed) return;
+    const dirs = ["up", "down", "left", "right"];
+    let bestDir = null;
+    let bestSlide = null;
+
+    if (session.level.solution && session.moves < session.level.solution.length) {
+      const solDir = session.level.solution[session.moves];
+      const s = simulateSlide(session.level, session.px, session.py, solDir, session.flags);
+      if (s.path.length >= 2) {
+        bestDir = solDir;
+        bestSlide = s;
+      }
+    }
+
+    if (!bestSlide) {
+      let maxNew = 0;
+      for (const d of dirs) {
+        const s = simulateSlide(session.level, session.px, session.py, d, session.flags);
+        if (s.path.length < 2) continue;
+        let newCount = 0;
+        for (const pt of s.path) {
+          if (!session.wakeCells.has(`${pt.x},${pt.y}`)) newCount++;
+        }
+        if (newCount > maxNew || (newCount > 0 && !bestSlide)) {
+          maxNew = newCount;
+          bestDir = d;
+          bestSlide = s;
+        }
+      }
+    }
+
+    if (!bestSlide || bestSlide.path.length < 2) return;
+
+    ctx.save();
+    const pulse = (Math.sin(this.time * 4) + 1) * 0.5;
+    ctx.strokeStyle = rgba(pal.floorLit || pal.accent, 0.45 + pulse * 0.4);
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 6]);
+    ctx.lineDashOffset = -this.time * 24;
+
+    ctx.beginPath();
+    for (let i = 0; i < bestSlide.path.length; i++) {
+      const pt = bestSlide.path[i];
+      const scr = this.cellToXY(pt.x, pt.y);
+      if (i === 0) ctx.moveTo(scr.x, scr.y);
+      else ctx.lineTo(scr.x, scr.y);
+    }
+    ctx.stroke();
+
+    const dest = bestSlide.path[bestSlide.path.length - 1];
+    const destScr = this.cellToXY(dest.x, dest.y);
+    ctx.fillStyle = rgba(pal.rim || "#ffffff", 0.7 + pulse * 0.3);
+    ctx.beginPath();
+    ctx.arc(destScr.x, destScr.y, 4 + pulse * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function mix(a, b, t) {
@@ -771,9 +917,12 @@ function lerpColor(a, b, t) {
 }
 
 function bodyColor(id, pal) {
-  if (id === "nuri-tide") return pal.accent;
-  if (id === "nuri-dusk") return "#c89ae8";
-  if (id === "nuri-leaf") return "#b4d46a";
-  if (id === "nuri-star") return "#9ab8ff";
-  return "#f0b07a";
+  if (id === "nuri-tide") return "#40d6ca";
+  if (id === "nuri-dusk") return "#c68cf4";
+  if (id === "nuri-leaf") return "#9cd646";
+  if (id === "nuri-star") return "#7ea4ff";
+  if (id === "nuri-pyra") return "#ff5533";
+  if (id === "nuri-zephyr") return "#4ec0f8";
+  if (id === "nuri-solas") return "#f8be28";
+  return "#f6a25e";
 }

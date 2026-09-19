@@ -107,7 +107,7 @@ export class UI {
   loading() {
     this.applyTheme("emberwake");
     this.root.innerHTML = `<div class="screen center" data-ui="1">
-      <div class="logo-mark"></div>
+      ${lumoraBrandEmblem()}
       <h1 class="logo">Lumora</h1>
       <p class="muted">Awakening the ancient platforms…</p>
       <div class="bar"><i style="width:${Math.round((this.game.loadP || 0) * 100)}%"></i></div>
@@ -117,31 +117,35 @@ export class UI {
   intro() {
     this.applyTheme("emberwake");
     this.root.innerHTML = `<div class="screen center" data-ui="1">
-      <div class="logo-mark pulse"></div>
+      ${lumoraBrandEmblem()}
       <h1 class="logo">Lumora</h1>
-      <p class="lede">Nuri glides across sleeping platforms.<br/>Restore every tile with your radiant wake.</p>
+      <p class="lede">Guide your radiant spirit across sleeping platforms.<br/>Awaken every tile with your luminous wake.</p>
     </div>`;
   }
 
   menu() {
     const save = this.game.save.data;
-    this.root.innerHTML = `<div class="screen menu" data-ui="1">
+    const totalStars = this.game.save.totalStars();
+    const totalPossibleStars = WORLDS.reduce((acc, w) => acc + w.levels * 3, 0);
+
+    this.root.innerHTML = `<div class="screen menu scroll-screen" data-ui="1">
       <div class="brand">
-        <div class="logo-mark"></div>
+        ${lumoraBrandEmblem()}
         <h1 class="logo">Lumora</h1>
-        <p class="lede">Guide Nuri. Restore every lattice.</p>
+        <p class="lede">Awaken the ancient lattices with radiant light.</p>
       </div>
       <div class="stack">
         <button class="btn primary" id="play">Continue Journey</button>
         <button class="btn" id="worlds">World Atlas</button>
         <button class="btn" id="daily">Dayweave Challenge</button>
         <div class="row">
-          <button class="btn ghost" id="col">Collection</button>
+          <button class="btn ghost" id="col">Store & Skins</button>
           <button class="btn ghost" id="set">Settings</button>
         </div>
         <button class="btn ghost" id="ach">Achievements</button>
       </div>
       <div class="menu-footer">
+        <span class="star-chip">${starSvg(true, 15)}<b>${totalStars}</b>/${totalPossibleStars}</span>
         ${gleamChip(save.gleams)}
       </div>
     </div>`;
@@ -157,11 +161,20 @@ export class UI {
 
   worlds() {
     const save = this.game.save.data;
+    const totalStarsEarned = this.game.save.totalStars();
+    const totalPossibleStars = WORLDS.reduce((acc, w) => acc + w.levels * 3, 0);
+
     const cards = WORLDS.map((w, i) => {
       const unlocked = i === 0 || save.worlds[w.id] || worldProgress(save.completed, WORLDS[i - 1].id) >= WORLDS[i - 1].levels;
       const done = worldProgress(save.completed, w.id);
       const pct = Math.round((done / w.levels) * 100);
       const isComplete = done >= w.levels;
+
+      let worldStars = 0;
+      for (let lv = 0; lv < w.levels; lv++) {
+        worldStars += save.stars?.[`${w.id}:${lv}`] || 0;
+      }
+
       return `<button class="card world-card ${unlocked ? "" : "locked"} ${isComplete ? "completed" : ""}" data-world="${w.id}" ${unlocked ? "" : "disabled"}>
         <div class="world-poster" aria-hidden="true">${worldPoster(w)}</div>
         <div class="world-meta">
@@ -170,7 +183,10 @@ export class UI {
               <span class="world-sector">SECTOR ${String(i + 1).padStart(2, "0")}</span>
               <strong>${w.name}</strong>
             </div>
-            <span class="world-count-badge ${isComplete ? "complete" : unlocked ? "active" : "locked"}">${unlocked ? (isComplete ? "✓ Restored" : `${done}/${w.levels}`) : "Locked"}</span>
+            <div class="world-badges-group">
+              ${unlocked ? `<span class="world-star-badge">${starSvg(true, 13)}<b>${worldStars}</b>/${w.levels * 3}</span>` : ""}
+              <span class="world-count-badge ${isComplete ? "complete" : unlocked ? "active" : "locked"}">${unlocked ? (isComplete ? "✓ Restored" : `${done}/${w.levels}`) : "Locked"}</span>
+            </div>
           </div>
           <p class="world-tagline">${w.tagline}</p>
           ${unlocked ?
@@ -183,11 +199,14 @@ export class UI {
 
     this.root.innerHTML = `<div class="screen scroll-screen" data-ui="1">
       <div class="topbar">
-        <button class="iconbtn" id="back" aria-label="Back">‹</button>
+        ${backBtnHtml("back")}
         <h2>World Atlas</h2>
-        ${gleamChip(save.gleams)}
+        <div class="topbar-right">
+          <span class="star-chip">${starSvg(true, 15)}<b>${totalStarsEarned}</b>/${totalPossibleStars}</span>
+          ${gleamChip(save.gleams)}
+        </div>
       </div>
-      <p class="lede slim">Select an atmospheric world to explore and illuminate its lattices.</p>
+      <p class="lede slim">Select an atmospheric realm to awaken its sleeping lattices.</p>
       <div class="cards world-grid">${cards}</div>
     </div>`;
 
@@ -215,8 +234,8 @@ export class UI {
           </div>
         </div>
         <div class="intro-focus-grid">
-          <div class="focus-chip"><b>Goal</b><span>Restore every glowing tile.</span></div>
-          <div class="focus-chip"><b>Obstacles</b><span>Notice hazards & ring seals.</span></div>
+          <div class="focus-chip"><b>How It Works</b><span>${getMechanicGuide(brief.art)}</span></div>
+          <div class="focus-chip"><b>Objective</b><span>Restore every tile to awaken sector.</span></div>
         </div>
         <button class="btn primary" id="go">Enter World</button>
       </div>
@@ -229,23 +248,47 @@ export class UI {
     const world = WORLDS.find((w) => w.id === worldId);
     this.applyTheme(worldId);
     const save = this.game.save.data;
+
+    let worldStars = 0;
+    for (let lv = 0; lv < world.levels; lv++) {
+      worldStars += save.stars?.[`${worldId}:${lv}`] || 0;
+    }
+
     let html = "";
     for (let i = 0; i < world.levels; i++) {
       const unlocked = i === 0 || save.completed[`${worldId}:${i - 1}`] || this.game.debug.enabled;
       const done = !!save.completed[`${worldId}:${i}`];
+      const stars = save.stars?.[`${worldId}:${i}`] || 0;
+      const best = save.bestMoves?.[`${worldId}:${i}`];
+
+      const starIcons = `
+        <div class="lvl-stars-row">
+          ${starSvg(stars >= 1, 12)}
+          ${starSvg(stars >= 2, 12)}
+          ${starSvg(stars >= 3, 12)}
+        </div>
+      `;
+
       html += `<button class="lvl ${done ? "done" : ""} ${unlocked ? "" : "locked"}" data-i="${i}" ${unlocked ? "" : "disabled"}>
-        <span class="lvl-gem">${gemSvg(13)}</span><b>${i + 1}</b>
+        <div class="lvl-num"><b>${i + 1}</b></div>
+        ${done ? starIcons : `<div class="lvl-gem">${gemSvg(14)}</div>`}
+        ${best != null ? `<span class="lvl-best">${best} glides</span>` : unlocked && !done ? `<span class="lvl-ready">Play</span>` : `<span class="lvl-lock">🔒</span>`}
       </button>`;
     }
+
     this.root.innerHTML = `<div class="screen scroll-screen" data-ui="1">
       <div class="topbar">
-        <button class="iconbtn" id="back" aria-label="Back">‹</button>
+        ${backBtnHtml("back")}
         <h2>${world.name}</h2>
-        ${gleamChip(save.gleams)}
+        <div class="topbar-right">
+          <span class="star-chip">${starSvg(true, 15)}<b>${worldStars}</b>/${world.levels * 3}</span>
+          ${gleamChip(save.gleams)}
+        </div>
       </div>
       <p class="lede slim">${world.tagline}</p>
       <div class="grid-lvls">${html}</div>
     </div>`;
+
     this.root.querySelector("#back").onclick = () => this.game.fsm.set(STATES.WORLD_SELECT);
     this.root.querySelectorAll("[data-i]").forEach((el) => {
       el.onclick = () => this.game.startLevel(worldId, +el.dataset.i);
@@ -258,6 +301,19 @@ export class UI {
     this.applyTheme(s.level);
     const p = s.progress();
     const pct = p.max ? Math.round((p.cur / p.max) * 100) : 0;
+    const isFirstWorld = s.level.worldId === "emberwake" && s.level.index < 2 && s.moves === 0;
+    const moveTutorial = isFirstWorld
+      ? `<div class="move-tutorial" data-ui="1">
+          <div class="keys-row">
+            <span class="key-badge">W</span>
+            <div class="keys-sub"><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span></div>
+          </div>
+          <div class="tut-text">Swipe or use WASD / Arrow Keys to Glide</div>
+        </div>`
+      : "";
+    const stuckBanner = s.stuck
+      ? `<div class="stuck-banner"><span>Lattice blocked — tap ↻ to restart</span></div>`
+      : "";
     const hint = this.game.showHint ? `<div class="hint">${s.level.hint || "Swipe to glide — illuminate every platform"}</div>` : "";
     const save = this.game.save?.data || { gleams: 0 };
     const world = WORLDS.find((w) => w.id === s.level.worldId);
@@ -276,9 +332,11 @@ export class UI {
         </div>
         <div class="hud-actions">
           <span class="hud-gleam-badge">${gemSvg(16)}<b>${save.gleams}</b></span>
-          <button class="iconbtn hud-btn" id="restart" aria-label="Restart">↻</button>
+          <button class="iconbtn hud-btn ${s.stuck ? "stuck-pulse" : ""}" id="restart" aria-label="Restart">↻</button>
         </div>
       </div>
+      ${moveTutorial}
+      ${stuckBanner}
       ${hint}
     </div>`;
     this.root.querySelector("#pause").onclick = () => this.game.pause();
@@ -293,15 +351,32 @@ export class UI {
     const bar = this.root.querySelector(".progress-bar i");
     const label = this.root.querySelector(".progress-label");
     const gleamEl = this.root.querySelector(".hud-gleam-badge b");
+    const restartBtn = this.root.querySelector("#restart");
+    let stuckBanner = this.root.querySelector(".stuck-banner");
+    const moveTut = this.root.querySelector(".move-tutorial");
+
     if (bar) bar.style.width = `${pct}%`;
     if (label) label.textContent = `${p.cur}/${p.max} tiles · ${s.moves} glides`;
     if (gleamEl && this.game.save?.data) gleamEl.textContent = String(this.game.save.data.gleams);
+    if (moveTut && s.moves > 0) moveTut.remove();
+
+    if (restartBtn) {
+      restartBtn.classList.toggle("stuck-pulse", !!s.stuck);
+    }
+    if (s.stuck && !stuckBanner) {
+      const b = document.createElement("div");
+      b.className = "stuck-banner";
+      b.innerHTML = "<span>Lattice blocked — tap ↻ to restart</span>";
+      this.root.querySelector(".hud")?.appendChild(b);
+    } else if (!s.stuck && stuckBanner) {
+      stuckBanner.remove();
+    }
   }
 
   pause() {
     this.root.innerHTML = `<div class="screen dim" data-ui="1">
       <div class="panel">
-        <p class="eyebrow">Paued</p>
+        <p class="eyebrow">Paused</p>
         <h2>Journey Paused</h2>
         <p class="lede slim">The platforms patiently await your wake.</p>
         <button class="btn primary" id="resume">Resume Glide</button>
@@ -319,17 +394,40 @@ export class UI {
   }
 
   complete() {
-    const r = this.game.lastReward || { reward: 0, efficient: false };
+    const r = this.game.lastReward || { reward: 0, efficient: false, starsEarned: 1, moves: 0, target3Star: 0, target2Star: 0 };
     const s = this.game.session;
     if (s) this.applyTheme(s.level);
+
+    const stars = r.starsEarned || 1;
+    const starsHtml = `
+      <div class="completion-stars-showcase">
+        <div class="comp-star ${stars >= 1 ? "awarded pulse-1" : "unearned"}">${starSvg(stars >= 1, 38)}</div>
+        <div class="comp-star center-star ${stars >= 2 ? "awarded pulse-2" : "unearned"}">${starSvg(stars >= 2, 46)}</div>
+        <div class="comp-star ${stars >= 3 ? "awarded pulse-3" : "unearned"}">${starSvg(stars >= 3, 38)}</div>
+      </div>
+      <div class="star-rating-subtitle">
+        ${stars === 3 ? "★★★ Pristine Optimal Run" : stars === 2 ? "★★ Great Precision" : "★ Lattice Awoken"}
+      </div>
+    `;
+
+    const statsDetail = r.moves ? `
+      <div class="move-comparison-pill">
+        <span>Glides: <b>${r.moves}</b></span>
+        <span class="divider">·</span>
+        <span>Target for 3★: <b>≤${r.target3Star}</b></span>
+      </div>
+    ` : "";
+
     this.root.innerHTML = `<div class="screen dim" data-ui="1">
-      <div class="panel shine">
+      <div class="panel shine complete-panel">
         <p class="eyebrow">Lattice Restored</p>
-        <h2>All Tiles Glowing</h2>
-        <p class="lede">Nuri’s wake has illuminated the entire platform.</p>
+        <h2>${s?.level?.title || "Platform Awoken"}</h2>
+        ${starsHtml}
+        ${statsDetail}
         <div class="reward-box">
           <span class="reward-amount">${gemSvg(26)} +${r.reward} Gleams</span>
-          ${r.efficient ? `<span class="reward-badge">★ Quiet Path Mastery</span>` : ""}
+          ${r.efficient ? `<span class="reward-badge">★ Quiet Path Mastery (+5 Bonus)</span>` : ""}
+          ${r.newStarsGained ? `<span class="star-bonus-badge">+${r.newStarsGained * 3} Star Mastery Bonus</span>` : ""}
         </div>
         <button class="btn primary" id="next">Next Lattice</button>
         <button class="btn" id="again">Replay Lattice</button>
@@ -345,23 +443,26 @@ export class UI {
 
   settings() {
     const s = this.game.save.data.settings;
+    const currentSpeed = s.speed || 1.0;
     const pct = (v) => Math.round(v * 100);
 
     const resetModal = this.showResetConfirm
       ? `<div class="buy-overlay" data-ui="1">
-          <div class="panel">
-            <p class="eyebrow warning-text">Warning</p>
-            <h2>Reset Progress?</h2>
-            <p class="lede slim">This will reset all unlocked levels, cosmetics, and achievements. This cannot be undone.</p>
-            <button class="btn danger" id="reset-confirm">Yes, Reset Everything</button>
-            <button class="btn ghost" id="reset-cancel">Keep My Progress</button>
+          <div class="panel confirm-modal reset-modal">
+            <p class="eyebrow warning-text">Confirm Reset</p>
+            <h2>Reset All Progress?</h2>
+            <p class="lede slim">This will reset all unlocked sectors, custom character skins, and milestones back to defaults. This action cannot be undone.</p>
+            <div class="modal-actions">
+              <button class="btn danger" id="reset-confirm">Yes, Reset Everything</button>
+              <button class="btn ghost" id="reset-cancel">Keep My Progress</button>
+            </div>
           </div>
         </div>`
       : "";
 
     this.root.innerHTML = `<div class="screen scroll-screen" data-ui="1">
       <div class="topbar">
-        <button class="iconbtn" id="back" aria-label="Back">‹</button>
+        ${backBtnHtml("back")}
         <h2>Settings</h2>
         <span class="top-spacer"></span>
       </div>
@@ -400,7 +501,13 @@ export class UI {
           ${tog("hints", "Show Path Hints", this.game.showHint)}
           <div class="info-row">
             <span>Gliding Speed Pace</span>
-            <b class="stat-pill">6.2 · Smooth Calm</b>
+            <b class="stat-pill">${currentSpeed}x · ${currentSpeed === 1.0 ? "Calm" : currentSpeed <= 1.25 ? "Swift" : currentSpeed <= 1.5 ? "Brisk" : "Hyper"}</b>
+          </div>
+          <div class="seg" id="speed">
+            <button type="button" class="seg-btn ${currentSpeed === 1.0 ? "on" : ""}" data-spd="1.0">1.0x Calm</button>
+            <button type="button" class="seg-btn ${currentSpeed === 1.25 ? "on" : ""}" data-spd="1.25">1.25x Swift</button>
+            <button type="button" class="seg-btn ${currentSpeed === 1.5 ? "on" : ""}" data-spd="1.5">1.5x Brisk</button>
+            <button type="button" class="seg-btn ${currentSpeed === 2.0 ? "on" : ""}" data-spd="2.0">2.0x Hyper</button>
           </div>
         </section>
 
@@ -411,7 +518,7 @@ export class UI {
           </div>
           <div class="info-row">
             <span>Version</span>
-            <b>1.2.0 · Refined Edition</b>
+            <b>1.2.0 · Production Edition</b>
           </div>
           <button class="btn danger-outline" id="reset-btn">Reset Save Data</button>
         </section>
@@ -438,6 +545,7 @@ export class UI {
     if (hintsCheck) {
       hintsCheck.onchange = (e) => {
         this.game.showHint = e.target.checked;
+        this.game.setSetting("hints", e.target.checked);
         this.game.audio.click();
       };
     }
@@ -458,7 +566,7 @@ export class UI {
         this.game.save.reset();
         this.showResetConfirm = false;
         this._key = "";
-        this.setToast("Game progress reset");
+        this.setToast("Game progress reset successfully");
         this.render();
       };
     }
@@ -495,6 +603,17 @@ export class UI {
         this.render();
       };
     });
+
+    this.root.querySelectorAll("[data-spd]").forEach((btn) => {
+      btn.onclick = () => {
+        this.game.audio.click();
+        const spd = parseFloat(btn.dataset.spd);
+        this.root.querySelectorAll("[data-spd]").forEach((b) => b.classList.toggle("on", b === btn));
+        this.game.setSetting("speed", spd);
+        this._key = "";
+        this.render();
+      };
+    });
   }
 
   collection() {
@@ -502,10 +621,10 @@ export class UI {
     const pending = COSMETICS.find((c) => c.id === this.pendingBuy);
 
     const CATEGORIES = [
-      { id: "all", name: "All Looks" },
-      { id: "body", name: "Coats" },
+      { id: "all", name: "All Items" },
+      { id: "body", name: "Characters" },
       { id: "wake", name: "Wake Trails" },
-      { id: "mote", name: "Motes" },
+      { id: "mote", name: "Aura Motes" },
       { id: "burst", name: "Blooms" },
       { id: "sky", name: "Sky Veils" },
     ];
@@ -543,13 +662,11 @@ export class UI {
       }
 
       return `<div class="card cos-card state-${state} ${eq ? "is-equipped" : ""}" data-id="${c.id}">
-        <div class="cos-art type-${c.type} id-${c.id}" aria-hidden="true">
-          ${eq ? `<span class="equipped-badge">EQUIPPED</span>` : owned ? `<span class="owned-badge">OWNED</span>` : `<span class="lock-badge">🔒</span>`}
-        </div>
+        ${renderCosmeticPreview(c, eq, owned)}
         <div class="cos-card-body">
           <div class="cos-card-top">
             <strong>${c.name}</strong>
-            <span class="cos-type">${COSMETIC_TYPE[c.type] || c.type}</span>
+            <span class="cos-type">${c.type === "body" ? (c.title || "Character Skin") : (COSMETIC_TYPE[c.type] || c.type)}</span>
           </div>
           <p class="cos-blurb">${c.blurb || ""}</p>
           <div class="cos-card-footer">
@@ -559,20 +676,20 @@ export class UI {
       </div>`;
     }).join("");
 
-    // Modal for confirming purchase
+    // Centered modal for confirming purchase
     let modal = "";
     if (pending) {
       const canAfford = save.gleams >= pending.cost;
       const remaining = save.gleams - pending.cost;
       modal = `<div class="buy-overlay" data-ui="1">
         <div class="panel confirm-modal">
-          <p class="eyebrow">Confirm Wardrobe Unlock</p>
+          <p class="eyebrow">Unlock Confirmation</p>
           <div class="buy-preview-stage">
-            <div class="buy-preview cos-art type-${pending.type} id-${pending.id}"></div>
+            ${renderCosmeticPreview(pending, false, false)}
           </div>
           <h2>${pending.name}</h2>
-          <span class="badge-type">${COSMETIC_TYPE[pending.type] || pending.type}</span>
-          <p class="lede slim">${pending.blurb || "A radiant look for Nuri."}</p>
+          <span class="badge-type">${pending.type === "body" ? (pending.title || "Character Skin") : (COSMETIC_TYPE[pending.type] || pending.type)}</span>
+          <p class="lede slim">${pending.blurb || "A radiant spirit look."}</p>
 
           <div class="price-breakdown">
             <div class="price-row">
@@ -589,11 +706,11 @@ export class UI {
             </div>
           </div>
 
-          ${!canAfford ? `<div class="insufficient-alert">You need ${pending.cost - save.gleams} more Gleams to unlock this look.</div>` : ""}
+          ${!canAfford ? `<div class="insufficient-alert">You need ${pending.cost - save.gleams} more Gleams to unlock this item.</div>` : ""}
 
           <div class="modal-actions">
             <button class="btn primary ${canAfford ? "" : "disabled"}" id="buyyes" ${canAfford ? "" : "disabled"}>
-              ${gemSvg(18)} Unlock Look
+              ${gemSvg(18)} Unlock Item
             </button>
             <button class="btn ghost" id="buyno">Not Now</button>
           </div>
@@ -603,23 +720,22 @@ export class UI {
 
     this.root.innerHTML = `<div class="screen scroll-screen" data-ui="1">
       <div class="topbar">
-        <button class="iconbtn" id="back" aria-label="Back">‹</button>
-        <h2>Wardrobe Collection</h2>
+        ${backBtnHtml("back")}
+        <h2>Store & Sanctuary</h2>
         ${gleamChip(save.gleams)}
       </div>
 
       <!-- Live Hero Stage -->
       <div class="col-hero">
         <div class="hero-showcase">
-          <div class="hero-nuri ${save.equipped.body || "nuri-dawn"}">
-            <div class="hero-nuri-face"></div>
-            <div class="hero-nuri-glow"></div>
+          <div class="hero-preview-avatar">
+            ${renderCosmeticPreview(equippedBody, true, true)}
           </div>
           <div class="hero-meta">
-            <span class="hero-tag">ACTIVE LOOK</span>
+            <span class="hero-tag">ACTIVE COMPANION</span>
             <h3>${equippedBody.name}</h3>
             <p class="hero-sub">${equippedWake?.name || "Soft Ribbon"} trail · ${equippedMote?.name || "Tiny Orbs"}</p>
-            <span class="hero-owned-count">Collected: ${save.owned.length} of ${COSMETICS.length} looks</span>
+            <span class="hero-owned-count">Collected: ${save.owned.length} of ${COSMETICS.length} items</span>
           </div>
         </div>
       </div>
@@ -702,7 +818,7 @@ export class UI {
     const d = this.game.save.data.daily;
     this.applyTheme("daily");
     this.root.innerHTML = `<div class="screen center" data-ui="1">
-      <div class="topbar abs"><button class="iconbtn" id="back" aria-label="Back">‹</button></div>
+      <div class="topbar abs">${backBtnHtml("back")}</div>
       <h2 class="logo small">Dayweave</h2>
       <p class="lede">A unique lattice handcrafted for this day. Restore every tile.</p>
       <div class="daily-badge-card">
@@ -750,7 +866,7 @@ export class UI {
 
     this.root.innerHTML = `<div class="screen scroll-screen" data-ui="1">
       <div class="topbar">
-        <button class="iconbtn" id="back" aria-label="Back">‹</button>
+        ${backBtnHtml("back")}
         <h2>Achievements</h2>
         ${gleamChip(save.gleams)}
       </div>
@@ -820,6 +936,33 @@ export function gemSvg(size = 18) {
   </svg>`;
 }
 
+export function starSvg(filled = true, size = 18) {
+  if (filled) {
+    return `<svg class="star-ico filled" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">
+      <defs>
+        <linearGradient id="starGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fff8d6"/>
+          <stop offset="50%" stop-color="#ffd054"/>
+          <stop offset="100%" stop-color="#e08a18"/>
+        </linearGradient>
+      </defs>
+      <polygon points="12,2 15.2,8.5 22.4,9.5 17.2,14.6 18.4,21.8 12,18.4 5.6,21.8 6.8,14.6 1.6,9.5 8.8,8.5" fill="url(#starGrad)" stroke="#783c06" stroke-width="0.8" stroke-linejoin="round"/>
+      <polygon points="12,4 14,9 18,9.7 15,12.6 12,11" fill="#ffffff" opacity="0.6"/>
+    </svg>`;
+  }
+  return `<svg class="star-ico empty" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">
+    <polygon points="12,2 15.2,8.5 22.4,9.5 17.2,14.6 18.4,21.8 12,18.4 5.6,21.8 6.8,14.6 1.6,9.5 8.8,8.5" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+export function backBtnHtml(id = "back") {
+  return `<button class="iconbtn back-btn" id="${id}" aria-label="Back">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+  </button>`;
+}
+
 function gleamChip(n) {
   return `<span class="gleam-chip">${gemSvg(18)}<b>${n}</b><span>Gleams</span></span>`;
 }
@@ -834,9 +977,16 @@ function slider(id, label, v, shown) {
 
 function achProgress(x, save) {
   const n = Object.keys(save.completed || {}).length;
+  const starsMap = save.stars || {};
+  const totalStars = Object.values(starsMap).reduce((acc, v) => acc + (v || 0), 0);
+  const maxStarsAny = Math.max(0, ...Object.values(starsMap));
+
   if (x.id === "first-wake") return { cur: Math.min(n, 1), max: 1 };
+  if (x.id === "first-3star") return { cur: maxStarsAny >= 3 ? 1 : 0, max: 1 };
   if (x.id === "ten-lattices") return { cur: Math.min(n, 10), max: 10 };
   if (x.id === "fifty-lattices") return { cur: Math.min(n, 50), max: 50 };
+  if (x.id === "star-collector") return { cur: Math.min(totalStars, 25), max: 25 };
+  if (x.id === "star-master") return { cur: Math.min(totalStars, 75), max: 75 };
   if (x.id.startsWith("world-")) {
     const wid = x.id.slice(6);
     const w = WORLDS.find((o) => o.id === wid);
@@ -1143,37 +1293,373 @@ const POSTER = {
   },
 };
 
+function lumoraBrandEmblem() {
+  return `<div class="brand-emblem" aria-hidden="true">
+    <svg viewBox="0 0 100 100" class="brand-mascot-svg">
+      <defs>
+        <radialGradient id="emblemGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="var(--rim, #ffd0a0)" stop-opacity="0.6"/>
+          <stop offset="60%" stop-color="var(--accent, #ff9a4a)" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </radialGradient>
+        <radialGradient id="wispBody" cx="38%" cy="32%" r="55%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="35%" stop-color="#fff0d0"/>
+          <stop offset="70%" stop-color="var(--accent, #ff9a4a)"/>
+          <stop offset="100%" stop-color="var(--accent-deep, #d45a28)"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="50" cy="50" rx="42" ry="16" fill="none" stroke="var(--rim, #ffd0a0)" stroke-width="1.8" stroke-dasharray="8 4" opacity="0.6" transform="rotate(-15 50 50)"/>
+      <circle cx="50" cy="50" r="44" fill="url(#emblemGlow)"/>
+      <ellipse cx="38" cy="24" rx="7" ry="14" fill="#ffd0a0" transform="rotate(-20 38 24)"/>
+      <ellipse cx="38" cy="24" rx="3.5" ry="9" fill="#fff5ea" transform="rotate(-20 38 24)"/>
+      <ellipse cx="62" cy="24" rx="7" ry="14" fill="#ffd0a0" transform="rotate(20 62 24)"/>
+      <ellipse cx="62" cy="24" rx="3.5" ry="9" fill="#fff5ea" transform="rotate(20 62 24)"/>
+      <ellipse cx="50" cy="54" rx="26" ry="29" fill="url(#wispBody)"/>
+      <ellipse cx="43" cy="42" rx="8" ry="4" fill="#ffffff" opacity="0.6" transform="rotate(-25 43 42)"/>
+      <circle cx="43" cy="54" r="3.2" fill="#180e14"/>
+      <circle cx="57" cy="54" r="3.2" fill="#180e14"/>
+      <circle cx="44.2" cy="52.8" r="1.1" fill="#ffffff"/>
+      <circle cx="58.2" cy="52.8" r="1.1" fill="#ffffff"/>
+      <path d="M48,60 Q50,62.5 52,60" fill="none" stroke="var(--accent-deep, #d45a28)" stroke-width="1.4" stroke-linecap="round"/>
+      <polygon points="18,34 20,38 24,40 20,42 18,46 16,42 12,40 16,38" fill="#ffeaa0" opacity="0.85"/>
+      <polygon points="82,48 83.5,51 86.5,52.5 83.5,54 82,57 80.5,54 77.5,52.5 80.5,51" fill="#ffeaa0" opacity="0.85"/>
+    </svg>
+  </div>`;
+}
+
+function renderCosmeticPreview(c, isEquipped = false, isOwned = false) {
+  if (!c) return "";
+  const type = c.type;
+  let art = "";
+
+  if (type === "body") {
+    const col = c.color || "#ff9a4a";
+    const glow = c.glow || "#ffe49e";
+    let earArt = "";
+    if (c.id === "nuri-tide") {
+      earArt = `<ellipse cx="28" cy="30" rx="5" ry="14" fill="#40d6ca" opacity="0.9" transform="rotate(-35 28 30)"/>
+                <ellipse cx="72" cy="30" rx="5" ry="14" fill="#40d6ca" opacity="0.9" transform="rotate(35 72 30)"/>`;
+    } else if (c.id === "nuri-dusk") {
+      earArt = `<path d="M36,36 Q18,12 28,34" fill="#c68cf4"/>
+                <path d="M64,36 Q82,12 72,34" fill="#c68cf4"/>`;
+    } else if (c.id === "nuri-leaf") {
+      earArt = `<ellipse cx="34" cy="22" rx="4.5" ry="11" fill="#9cd646" transform="rotate(-25 34 22)"/>
+                <ellipse cx="66" cy="22" rx="4.5" ry="11" fill="#9cd646" transform="rotate(25 66 22)"/>
+                <line x1="34" y1="16" x2="34" y2="28" stroke="#387818" stroke-width="1"/>
+                <line x1="66" y1="16" x2="66" y2="28" stroke="#387818" stroke-width="1"/>`;
+    } else if (c.id === "nuri-star") {
+      earArt = `<ellipse cx="50" cy="26" rx="34" ry="10" fill="none" stroke="#b4d2ff" stroke-width="2" opacity="0.9"/>
+                <circle cx="78" cy="26" r="3" fill="#ffffff"/>`;
+    } else if (c.id === "nuri-pyra") {
+      earArt = `<path d="M36,32 Q24,10 32,8 Q40,16 39,32 Z" fill="#ffaa20"/>
+                <path d="M64,32 Q76,10 68,8 Q60,16 61,32 Z" fill="#ffaa20"/>`;
+    } else if (c.id === "nuri-zephyr") {
+      earArt = `<ellipse cx="22" cy="42" rx="5" ry="16" fill="#80d8ff" opacity="0.9" transform="rotate(-60 22 42)"/>
+                <ellipse cx="78" cy="42" rx="5" ry="16" fill="#80d8ff" opacity="0.9" transform="rotate(60 78 42)"/>`;
+    } else if (c.id === "nuri-solas") {
+      earArt = `<polygon points="50,10 53,24 47,24" fill="#ffd840"/>
+                <polygon points="36,14 44,25 39,27" fill="#ffd840"/>
+                <polygon points="64,14 61,27 56,25" fill="#ffd840"/>`;
+    } else {
+      earArt = `<ellipse cx="36" cy="24" rx="6" ry="13" fill="#ffd0a0" transform="rotate(-20 36 24)"/>
+                <ellipse cx="64" cy="24" rx="6" ry="13" fill="#ffd0a0" transform="rotate(20 64 24)"/>
+                <ellipse cx="36" cy="24" rx="3" ry="8" fill="#fff5ea" transform="rotate(-20 36 24)"/>
+                <ellipse cx="64" cy="24" rx="3" ry="8" fill="#fff5ea" transform="rotate(20 64 24)"/>`;
+    }
+
+    art = `<svg viewBox="0 0 100 100" class="cos-preview-svg">
+      <defs>
+        <radialGradient id="charHalo-${c.id}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="${col}" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </radialGradient>
+        <radialGradient id="charBody-${c.id}" cx="38%" cy="35%" r="55%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="40%" stop-color="${glow}"/>
+          <stop offset="100%" stop-color="${col}"/>
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="52" r="38" fill="url(#charHalo-${c.id})"/>
+      ${earArt}
+      <ellipse cx="50" cy="54" rx="24" ry="27" fill="url(#charBody-${c.id})"/>
+      <ellipse cx="44" cy="44" rx="6" ry="3" fill="#ffffff" opacity="0.6" transform="rotate(-25 44 44)"/>
+      <circle cx="43" cy="53" r="2.8" fill="#140c16"/>
+      <circle cx="57" cy="53" r="2.8" fill="#140c16"/>
+      <circle cx="44" cy="52" r="0.9" fill="#ffffff"/>
+      <circle cx="58" cy="52" r="0.9" fill="#ffffff"/>
+    </svg>`;
+  } else if (type === "wake") {
+    const isSparks = c.id === "wake-sparks";
+    const isPetals = c.id === "wake-petals";
+    art = `<svg viewBox="0 0 100 100" class="cos-preview-svg">
+      <path d="M15,75 Q50,25 85,45" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+      ${isPetals ? `
+        <circle cx="35" cy="50" r="4" fill="#ffb4c8"/>
+        <circle cx="55" cy="35" r="4.5" fill="#ff8aa8"/>
+        <circle cx="75" cy="42" r="3.5" fill="#ffd0e0"/>
+      ` : isSparks ? `
+        <circle cx="25" cy="65" r="2.5" fill="#fff5aa"/>
+        <circle cx="42" cy="44" r="3" fill="#ffe488"/>
+        <circle cx="62" cy="32" r="3.5" fill="#ffffff"/>
+        <circle cx="80" cy="44" r="2.5" fill="#ffd070"/>
+      ` : `
+        <path d="M15,75 Q50,25 85,45" fill="none" stroke="#fff5ea" stroke-width="2" stroke-linecap="round"/>
+      `}
+    </svg>`;
+  } else if (type === "mote") {
+    const isRings = c.id === "mote-rings";
+    art = `<svg viewBox="0 0 100 100" class="cos-preview-svg">
+      ${isRings ? `
+        <circle cx="50" cy="50" r="16" fill="none" stroke="var(--rim)" stroke-width="2.2" opacity="0.9"/>
+        <circle cx="50" cy="50" r="28" fill="none" stroke="var(--accent)" stroke-width="1.8" opacity="0.6"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.3"/>
+      ` : `
+        <circle cx="35" cy="45" r="6" fill="#ffffff" opacity="0.9"/>
+        <circle cx="35" cy="45" r="12" fill="var(--accent)" opacity="0.3"/>
+        <circle cx="65" cy="40" r="7" fill="#ffffff" opacity="0.9"/>
+        <circle cx="65" cy="40" r="14" fill="var(--accent)" opacity="0.3"/>
+        <circle cx="50" cy="68" r="5" fill="#ffffff" opacity="0.8"/>
+      `}
+    </svg>`;
+  } else if (type === "burst") {
+    const isConst = c.id === "burst-constellation";
+    art = `<svg viewBox="0 0 100 100" class="cos-preview-svg">
+      ${isConst ? `
+        <line x1="25" y1="35" x2="50" y2="25" stroke="rgba(255,255,255,0.5)" stroke-width="1.2"/>
+        <line x1="50" y1="25" x2="75" y2="40" stroke="rgba(255,255,255,0.5)" stroke-width="1.2"/>
+        <line x1="50" y1="25" x2="50" y2="70" stroke="rgba(255,255,255,0.5)" stroke-width="1.2"/>
+        <circle cx="25" cy="35" r="3" fill="#ffffff"/>
+        <circle cx="50" cy="25" r="4.5" fill="#ffe488"/>
+        <circle cx="75" cy="40" r="3" fill="#ffffff"/>
+        <circle cx="50" cy="70" r="4" fill="#a8d4ff"/>
+      ` : `
+        <circle cx="50" cy="50" r="28" fill="none" stroke="var(--rim)" stroke-width="2"/>
+        <circle cx="50" cy="50" r="14" fill="var(--accent)" opacity="0.7"/>
+        <circle cx="50" cy="50" r="5" fill="#ffffff"/>
+      `}
+    </svg>`;
+  } else {
+    const isAurora = c.id === "sky-aurora";
+    art = `<svg viewBox="0 0 100 100" class="cos-preview-svg">
+      <defs>
+        <linearGradient id="skyGrad-${c.id}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${isAurora ? "#143048" : "#241628"}"/>
+          <stop offset="100%" stop-color="${isAurora ? "#08101e" : "#0c0812"}"/>
+        </linearGradient>
+      </defs>
+      <rect width="100" height="100" rx="14" fill="url(#skyGrad-${c.id})"/>
+      ${isAurora ? `
+        <path d="M10,40 Q40,15 70,35 T100,20 L100,70 L0,70 Z" fill="#48d8d0" opacity="0.35"/>
+        <path d="M0,50 Q30,30 60,45 T100,35 L100,75 L0,75 Z" fill="#c890f0" opacity="0.35"/>
+      ` : `
+        <circle cx="30" cy="35" r="1.5" fill="#ffffff" opacity="0.8"/>
+        <circle cx="70" cy="25" r="2" fill="#ffd0a0" opacity="0.9"/>
+        <circle cx="80" cy="65" r="1.5" fill="#ffffff" opacity="0.7"/>
+      `}
+    </svg>`;
+  }
+
+  return `<div class="cos-preview-box">
+    ${art}
+    ${isEquipped ? `<span class="equipped-badge">EQUIPPED</span>` : isOwned ? `<span class="owned-badge">OWNED</span>` : `<span class="lock-badge">🔒</span>`}
+  </div>`;
+}
+
+function getMechanicGuide(kind) {
+  const guides = {
+    restore: "Glide across sleeping tiles to ignite them with radiant golden wake.",
+    well: "Glide into the fountain well to replenish its celestial water.",
+    seal: "Awaken the blossom crystal to shatter the golden lock rings.",
+    vane: "Ride into spinning vanes to redirect your gliding velocity.",
+    fold: "Step into paired foldgates to warp instantly through space.",
+    fracture: "Ash plates crack and plunge into the abyss once you depart.",
+    mirror: "Strike silver mirrors to reflect your glide at crisp 90° angles.",
+    oneway: "Arrows enforce flow. You can only glide with the direction of wind.",
+    rift: "Avoid void tears at all costs. Hitting a rift resets the lattice.",
+    sequence: "Awaken numbered pillars in strict numerical sequence (1 → 2 → 3).",
+    heart: "Discover the concealed beating heart at the lattice center.",
+    pillar: "Thread between solid ancient crystal spires to change direction.",
+    storm: "Ride gale currents while steering away from violent void rifts.",
+    forge: "Navigate fragile crumbling plates surrounded by dangerous tears.",
+  };
+  return guides[kind] || "Restore 100% of the platform tiles to complete the sector.";
+}
+
 function introArt(kind) {
   const scenes = {
     restore: `<svg viewBox="0 0 220 130" class="intro-svg">
-      <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd0a0"/><stop offset="1" stop-color="#ff9a4a"/></linearGradient></defs>
-      <ellipse cx="110" cy="108" rx="70" ry="10" fill="rgba(0,0,0,.35)"/>
-      <polygon points="70,78 110,58 150,78 110,98" fill="#3a2426"/>
-      <polygon points="70,62 110,42 150,62 110,82" fill="url(#g1)"/>
-      <polygon points="150,78 110,98 110,82 150,62" fill="#2a181a"/>
-      <circle cx="110" cy="52" r="11" fill="#fff4ea"/>
+      <defs>
+        <linearGradient id="tileGlow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe494"/><stop offset="1" stop-color="#ff9a4a"/></linearGradient>
+      </defs>
+      <!-- Isometric Platform Tiles -->
+      <polygon points="15,85 50,68 85,85 50,102" fill="#ffb86a"/>
+      <polygon points="75,85 110,68 145,85 110,102" class="demo-tile-2" fill="#ffb86a"/>
+      <polygon points="135,85 170,68 205,85 170,102" class="demo-tile-3" fill="#ffb86a"/>
+      <!-- Glowing Tile Tops -->
+      <polygon points="15,80 50,63 85,80 50,97" fill="url(#tileGlow)"/>
+      <polygon points="75,80 110,63 145,80 110,97" class="demo-tile-top-2" fill="url(#tileGlow)"/>
+      <polygon points="135,80 170,63 205,80 170,97" class="demo-tile-top-3" fill="url(#tileGlow)"/>
+      <!-- Animated Gliding Spirit -->
+      <g class="demo-spirit-glide">
+        <circle cx="0" cy="0" r="14" fill="#ffffff" opacity="0.3"/>
+        <circle cx="0" cy="0" r="10" fill="#fff2da"/>
+        <circle cx="0" cy="0" r="6" fill="#ff9a4a"/>
+        <circle cx="-3" cy="-1" r="1.5" fill="#1c1218"/>
+        <circle cx="3" cy="-1" r="1.5" fill="#1c1218"/>
+      </g>
     </svg>`,
+
     well: `<svg viewBox="0 0 220 130" class="intro-svg">
-      <polygon points="70,80 110,60 150,80 110,100" fill="#1e3c48"/>
-      <polygon points="70,64 110,44 150,64 110,84" fill="#48d8d0"/>
-      <circle cx="110" cy="64" r="16" fill="none" stroke="#e8fffc" stroke-width="4"/>
-      <circle cx="110" cy="64" r="6" fill="#7ef0e0"/>
+      <!-- Tile -->
+      <polygon points="65,95 110,75 155,95 110,115" fill="#163440"/>
+      <polygon points="65,90 110,70 155,90 110,110" fill="#1e3c48"/>
+      <!-- Well Rim & Pool -->
+      <ellipse cx="110" cy="90" rx="30" ry="15" fill="#0b2430" stroke="#48d8d0" stroke-width="2"/>
+      <ellipse cx="110" cy="90" rx="20" ry="10" fill="#38b8b0"/>
+      <!-- Animated Water Ripples -->
+      <ellipse cx="110" cy="90" rx="10" ry="5" class="demo-ripple-1" fill="none" stroke="#e8fffc" stroke-width="2"/>
+      <ellipse cx="110" cy="90" rx="18" ry="9" class="demo-ripple-2" fill="none" stroke="#7ef0e0" stroke-width="1.5"/>
+      <!-- Spirit on Well -->
+      <g transform="translate(110, 78)">
+        <circle cx="0" cy="0" r="11" fill="#c4fffa"/>
+        <circle cx="0" cy="0" r="7" fill="#48d8d0"/>
+      </g>
     </svg>`,
+
     seal: `<svg viewBox="0 0 220 130" class="intro-svg">
-      <polygon points="50,86 90,66 130,86 90,106" fill="#322448"/>
-      <polygon points="50,70 90,50 130,70 90,90" fill="#c890f0"/>
-      <circle cx="160" cy="70" r="16" fill="none" stroke="#ffc233" stroke-width="5"/>
-      <polygon points="160,58 170,76 150,76" fill="#ffc233" stroke="#000" stroke-width="1.5"/>
+      <!-- Left Blossom Tile -->
+      <polygon points="25,90 60,72 95,90 60,108" fill="#322448"/>
+      <polygon points="25,85 60,67 95,85 60,103" fill="#c890f0"/>
+      <circle cx="60" cy="85" r="7" fill="#ffffff"/>
+      <!-- Right Gate Tile with Ring Lock -->
+      <polygon points="125,90 160,72 195,90 160,108" fill="#201430"/>
+      <polygon points="125,85 160,67 195,85 160,103" fill="#4a2e68"/>
+      <!-- Unlocking Seal Ring -->
+      <g class="demo-seal-ring">
+        <circle cx="160" cy="80" r="16" fill="none" stroke="#ffc233" stroke-width="3"/>
+        <circle cx="160" cy="80" r="10" fill="none" stroke="#fff" stroke-width="1"/>
+        <rect x="156" y="76" width="8" height="9" rx="2" fill="#ffc233"/>
+      </g>
+      <!-- Beam shooting from blossom to seal -->
+      <line x1="60" y1="85" x2="160" y2="80" stroke="#ffd0a0" stroke-width="2" stroke-dasharray="4 4" class="demo-beam"/>
     </svg>`,
+
     vane: `<svg viewBox="0 0 220 130" class="intro-svg">
-      <polygon points="70,80 110,60 150,80 110,100" fill="#243c2c"/>
-      <polygon points="70,64 110,44 150,64 110,84" fill="#a8e050"/>
-      <g class="spin"><polygon points="110,50 126,70 94,70" fill="#589828"/></g>
+      <polygon points="65,95 110,75 155,95 110,115" fill="#1c3024"/>
+      <polygon points="65,90 110,70 155,90 110,110" fill="#a8e050"/>
+      <!-- Spinning Vane Arrow -->
+      <g class="demo-vane-spin" transform="translate(110, 90)">
+        <circle cx="0" cy="0" r="18" fill="none" stroke="#589828" stroke-width="2"/>
+        <polygon points="0,-16 12,8 -12,8" fill="#ffffff" stroke="#243c2c" stroke-width="1.5"/>
+      </g>
+      <!-- Glide path turn -->
+      <path d="M110,35 L110,90 L175,90" fill="none" stroke="#e0ffb0" stroke-width="2.5" stroke-dasharray="6 4" class="demo-turn-path"/>
     </svg>`,
+
     fold: `<svg viewBox="0 0 220 130" class="intro-svg">
-      <polygon points="30,70 70,50 110,70 70,90" fill="#88a8ff"/>
-      <polygon points="110,70 150,50 190,70 150,90" fill="#88a8ff"/>
-      <path d="M70 70 C90 40, 130 40, 150 70" fill="none" stroke="#f0f4ff" stroke-width="3"/>
+      <!-- Portal 1 -->
+      <ellipse cx="60" cy="85" rx="22" ry="32" class="demo-portal-1" fill="none" stroke="#88a8ff" stroke-width="3.5"/>
+      <ellipse cx="60" cy="85" rx="14" ry="22" fill="#141e38"/>
+      <!-- Portal 2 -->
+      <ellipse cx="160" cy="85" rx="22" ry="32" class="demo-portal-2" fill="none" stroke="#88a8ff" stroke-width="3.5"/>
+      <ellipse cx="160" cy="85" rx="14" ry="22" fill="#141e38"/>
+      <!-- Teleporting Arc -->
+      <path d="M60,65 Q110,25 160,65" fill="none" stroke="#f0f4ff" stroke-width="2" stroke-dasharray="4 4" class="demo-warp-arc"/>
+      <!-- Teleporting Nuri -->
+      <circle cx="60" cy="85" r="9" class="demo-nuri-teleport" fill="#fff"/>
+    </svg>`,
+
+    fracture: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <!-- Stable Tile -->
+      <polygon points="25,90 60,72 95,90 60,108" fill="#3a221c"/>
+      <polygon points="25,85 60,67 95,85 60,103" fill="#ff9a60"/>
+      <!-- Crumbling Ash Tile -->
+      <g class="demo-crumble-tile">
+        <polygon points="125,90 160,72 195,90 160,108" fill="#20100e"/>
+        <polygon points="125,85 160,67 195,85 160,103" fill="#ff7040"/>
+        <line x1="140" y1="75" x2="165" y2="92" stroke="#fff" stroke-width="1.8"/>
+        <line x1="155" y1="80" x2="148" y2="98" stroke="#fff" stroke-width="1.8"/>
+      </g>
+    </svg>`,
+
+    mirror: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <!-- Mirror Prism Tile -->
+      <polygon points="65,95 110,75 155,95 110,115" fill="#163030"/>
+      <polygon points="65,90 110,70 155,90 110,110" fill="#9ee0d0"/>
+      <!-- Silver Reflective Prism -->
+      <polygon points="100,85 120,70 120,95 100,110" fill="#ffffff" stroke="#388888" stroke-width="1.5"/>
+      <!-- Reflection Path -->
+      <path d="M35,115 L110,90 L185,55" fill="none" stroke="#fff" stroke-width="2.8" stroke-dasharray="5 5" class="demo-reflect-beam"/>
+      <circle cx="110" cy="90" r="8" fill="#ffffff" class="demo-flash"/>
+    </svg>`,
+
+    oneway: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <polygon points="65,95 110,75 155,95 110,115" fill="#163044"/>
+      <polygon points="65,90 110,70 155,90 110,110" fill="#7ec8ff"/>
+      <!-- Directional Wind Arrows -->
+      <g class="demo-wind-arrows" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round">
+        <path d="M90,95 L105,87 L90,79"/>
+        <path d="M105,95 L120,87 L105,79"/>
+        <path d="M120,95 L135,87 L120,79"/>
+      </g>
+    </svg>`,
+
+    rift: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <ellipse cx="110" cy="75" rx="45" ry="24" fill="#180c14" stroke="#c07090" stroke-width="1"/>
+      <!-- Swirling Void Rift -->
+      <g class="demo-rift-swirl">
+        <ellipse cx="110" cy="75" rx="30" ry="14" fill="#080206" stroke="#f0a0b8" stroke-width="2.5"/>
+        <path d="M90,75 Q110,60 130,75 T110,90 Z" fill="#903050"/>
+      </g>
+      <!-- Safe Perimeter Path -->
+      <path d="M45,75 Q110,35 175,75" fill="none" stroke="#ffe8a8" stroke-width="2.2" stroke-dasharray="4 4"/>
+    </svg>`,
+
+    sequence: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <!-- 3 Numbered Beacons -->
+      <g transform="translate(45, 80)">
+        <polygon points="-25,10 0,-5 25,10 0,25" class="demo-seq-1" fill="#ff9a4a"/>
+        <text x="0" y="14" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">1</text>
+      </g>
+      <g transform="translate(110, 70)">
+        <polygon points="-25,10 0,-5 25,10 0,25" class="demo-seq-2" fill="#4a3030"/>
+        <text x="0" y="14" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">2</text>
+      </g>
+      <g transform="translate(175, 60)">
+        <polygon points="-25,10 0,-5 25,10 0,25" class="demo-seq-3" fill="#4a3030"/>
+        <text x="0" y="14" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">3</text>
+      </g>
+    </svg>`,
+
+    heart: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <polygon points="65,95 110,75 155,95 110,115" fill="#143040"/>
+      <polygon points="65,90 110,70 155,90 110,110" fill="#80e0ff"/>
+      <!-- Glowing Radiant Heart -->
+      <path d="M110,88 C110,76 94,76 94,88 C94,100 110,112 110,112 C110,112 126,100 126,88 C126,76 110,76 110,88" class="demo-heart-pulse" fill="#ff4080" stroke="#fff" stroke-width="2"/>
+    </svg>`,
+
+    pillar: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <polygon points="65,95 110,75 155,95 110,115" fill="#1c3828"/>
+      <!-- Tall Crystal Obelisk Anchor -->
+      <polygon points="110,25 125,85 110,105 95,85" fill="#6ecf7a" stroke="#fff" stroke-width="1.5"/>
+      <line x1="110" y1="25" x2="110" y2="105" stroke="#fff" stroke-width="1"/>
+      <circle cx="110" cy="25" r="3" fill="#e8ffc8"/>
+    </svg>`,
+
+    storm: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <polygon points="65,95 110,75 155,95 110,115" fill="#142438"/>
+      <polygon points="65,90 110,70 155,90 110,110" fill="#6aa8ff"/>
+      <path d="M90,92 L105,84 L90,76" stroke="#fff" stroke-width="2.5" fill="none"/>
+      <ellipse cx="155" cy="70" rx="18" ry="9" fill="#080206" stroke="#ff6080" stroke-width="2"/>
+    </svg>`,
+
+    forge: `<svg viewBox="0 0 220 130" class="intro-svg">
+      <polygon points="35,90 70,72 105,90 70,108" fill="#ff6080"/>
+      <g class="demo-crumble-tile">
+        <polygon points="115,90 150,72 185,90 150,108" fill="#ff90a8"/>
+        <line x1="130" y1="80" x2="155" y2="95" stroke="#fff" stroke-width="2"/>
+      </g>
     </svg>`,
   };
   return scenes[kind] || scenes.restore;
@@ -1278,7 +1764,14 @@ export const UI_CSS = `
 .gleam-chip span { opacity: 0.82; font-weight: 600; font-size: 12px; }
 .gem-ico { display: block; flex: 0 0 auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.4)); }
 
-.menu-footer { margin-top: 14px; }
+.menu-footer {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
 .logo-mark {
   width: 64px; height: 68px; margin: 0 auto;
@@ -1331,11 +1824,43 @@ export const UI_CSS = `
 .topbar.abs { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 16px; }
 .topbar h2 { margin: 0; font-size: clamp(18px, 4.8vw, 22px); letter-spacing: 0.04em; font-family: "Fraunces", Georgia, serif; }
 
-.cards {
-  display: grid; gap: 14px;  flex: 1;
-  padding-bottom: 16px;
+.topbar-right {
+  display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
 }
-.world-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-content: start; }
+
+.back-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.back-btn:hover {
+  transform: translateX(-2px);
+  background: rgba(255,255,255,0.24);
+  border-color: rgba(255,255,255,0.3);
+}
+.back-btn:active {
+  transform: translateX(-3px) scale(0.96);
+}
+
+.star-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px 6px 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 220, 100, 0.45);
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  box-shadow: 0 0 16px rgba(255, 208, 84, 0.25);
+  backdrop-filter: blur(8px);
+}
+.star-chip b { color: #ffe694; font-size: 15px; font-weight: 800; }
+
+.cards {
+  display: grid; gap: 14px;
+  width: 100%; box-sizing: border-box;
+  padding-bottom: 24px;
+}
+.world-grid {
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  align-content: start;
+}
 .cos-grid { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); align-content: start; }
 .ach-grid { grid-template-columns: 1fr; align-content: start; gap: 12px; }
 
@@ -1348,18 +1873,33 @@ export const UI_CSS = `
 }
 .card:hover { border-color: rgba(255,255,255,0.22); }
 
-/* AAA Thriller World Posters & Cards */
-.world-card { padding: 0; overflow: hidden; gap: 0; background: #100b14; border-radius: 22px; border: 1px solid rgba(255,255,255,0.12); }
-.world-card:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,0,0,0.45); }
+/* AAA World Posters & Cards */
+.world-card {
+  padding: 0; overflow: hidden; gap: 0; background: #100b14;
+  border-radius: 22px; border: 1px solid rgba(255,255,255,0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.world-card:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+  border-color: rgba(255,255,255,0.25);
+}
 .world-card.completed { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
-.world-card.locked { opacity: 0.55; cursor: not-allowed; }
+.world-card.locked { opacity: 0.5; cursor: not-allowed; }
 .world-poster { aspect-ratio: 16 / 9; overflow: hidden; background: #06040a; position: relative; }
-.poster-svg { width: 100%; height: 100%; display: block; }
+.poster-svg { width: 100%; height: 100%; display: block; object-fit: cover; }
 .world-meta { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
 .world-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .world-name-group { display: flex; flex-direction: column; gap: 2px; }
 .world-sector { font-size: 10px; letter-spacing: 0.2em; font-weight: 800; color: var(--rim); opacity: 0.85; }
 .world-meta strong { font-size: 16px; font-family: "Fraunces", Georgia, serif; letter-spacing: 0.02em; }
+.world-badges-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.world-star-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(0,0,0,0.4); border: 1px solid rgba(255,214,120,0.3);
+  padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; color: #ffe694;
+}
+.world-star-badge b { color: #ffffff; font-size: 12px; }
 .world-count-badge { font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 999px; }
 .world-count-badge.active { background: rgba(255,255,255,0.12); color: var(--ink); }
 .world-count-badge.complete { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--rim); border: 1px solid var(--rim); }
@@ -1369,27 +1909,109 @@ export const UI_CSS = `
 .world-fill { display: block; height: 100%; border-radius: 99px; box-shadow: 0 0 10px currentColor; }
 .sleeping { font-size: 10px; opacity: 0.5; letter-spacing: 0.1em; text-transform: uppercase; }
 
-/* Level Select Grid */
+/* Level Select Grid & Modern 3-Star Cards */
 .grid-lvls {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-  overflow-y: auto; flex: 1; min-height: 0; align-content: start;
-  padding-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 24px;
 }
 .lvl {
-  height: 64px; border: 0; border-radius: 18px; overflow: hidden;
-  background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
-  color: #fff; font-weight: 700; cursor: pointer; font-family: "Sora", sans-serif; position: relative;
-  display: flex; align-items: center; justify-content: center; font-size: 17px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.08);
+  aspect-ratio: 1 / 1;
+  min-height: 84px;
+  border: 0; border-radius: 22px; overflow: hidden;
+  background: linear-gradient(145deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03));
+  color: #fff; font-family: "Sora", sans-serif; cursor: pointer; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: 10px 6px 8px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 6px 18px rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
-.lvl-gem { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; }
+.lvl:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: rgba(255,255,255,0.28);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+}
+.lvl:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.lvl-num {
+  font-size: 16px; font-weight: 800; letter-spacing: -0.02em;
+}
+.lvl-stars-row {
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  margin: 2px 0;
+}
+.lvl-best {
+  font-size: 10px; font-weight: 700; opacity: 0.85;
+  background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.lvl-ready {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--rim);
+}
+.lvl-lock {
+  font-size: 13px; opacity: 0.55;
+}
 .lvl.done {
-  background: linear-gradient(180deg, var(--rim), var(--accent));
-  color: #1a0e0e; font-weight: 800;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 40%, transparent);
+  background: linear-gradient(145deg, rgba(255, 184, 106, 0.22), rgba(212, 90, 40, 0.14));
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 25%, transparent);
 }
-.lvl.locked { opacity: 0.35; cursor: not-allowed; }
+.lvl.done .lvl-num {
+  color: #ffe8b0;
+}
+.lvl.locked {
+  opacity: 0.4; cursor: not-allowed;
+  background: rgba(255,255,255,0.02);
+}
+
+/* Completion Stars & Reward Celebration */
+.complete-panel {
+  text-align: center;
+  align-items: center;
+}
+.completion-stars-showcase {
+  display: flex; align-items: flex-end; justify-content: center; gap: 14px;
+  margin: 10px 0 6px; height: 60px;
+}
+.comp-star {
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.comp-star.center-star {
+  transform: translateY(-6px);
+}
+.comp-star.awarded {
+  filter: drop-shadow(0 0 16px rgba(255, 208, 84, 0.6));
+}
+.comp-star.pulse-1 { animation: starPop 0.5s ease 0.1s backwards; }
+.comp-star.pulse-2 { animation: starPop 0.5s ease 0.3s backwards; }
+.comp-star.pulse-3 { animation: starPop 0.5s ease 0.5s backwards; }
+@keyframes starPop {
+  0% { transform: scale(0) rotate(-25deg); opacity: 0; }
+  70% { transform: scale(1.25) rotate(10deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.star-rating-subtitle {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.08em;
+  color: #ffe694; text-transform: uppercase;
+}
+.move-comparison-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.35); padding: 5px 14px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12); font-size: 12px; margin: 4px 0 2px;
+}
+.move-comparison-pill b { color: var(--rim); font-weight: 800; }
+.move-comparison-pill .divider { opacity: 0.4; }
+.star-bonus-badge {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
+  color: #ffe694; background: rgba(255,214,120,0.15); padding: 3px 8px; border-radius: 999px;
+}
 
 /* HUD Design & Alignment */
 .hud { position: absolute; inset: 0; pointer-events: none; }
@@ -1439,6 +2061,51 @@ export const UI_CSS = `
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
 }
+
+.stuck-banner {
+  position: absolute; top: calc(max(14px, env(safe-area-inset-top)) + 74px); left: 50%;
+  transform: translateX(-50%);
+  background: rgba(220, 60, 40, 0.92); border: 1px solid rgba(255, 180, 160, 0.6);
+  color: #ffffff; padding: 6px 16px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; pointer-events: none;
+  box-shadow: 0 4px 20px rgba(220, 60, 40, 0.5);
+  animation: stuckPulse 1.2s ease-in-out infinite alternate;
+  white-space: nowrap; z-index: 10;
+}
+@keyframes stuckPulse {
+  from { transform: translateX(-50%) scale(0.98); opacity: 0.9; }
+  to { transform: translateX(-50%) scale(1.02); opacity: 1; }
+}
+
+.stuck-pulse {
+  background: linear-gradient(135deg, #ff5040, #ff8060) !important;
+  border-color: #ffe0d0 !important;
+  animation: restartWiggle 0.8s ease-in-out infinite !important;
+  box-shadow: 0 0 20px rgba(255, 80, 60, 0.7) !important;
+}
+@keyframes restartWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-12deg); }
+  75% { transform: rotate(12deg); }
+}
+
+.move-tutorial {
+  position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%);
+  background: rgba(16, 12, 24, 0.88); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 20px; padding: 14px 20px; text-align: center;
+  backdrop-filter: blur(12px); box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+  pointer-events: none; z-index: 10;
+}
+.keys-row { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
+.keys-sub { display: flex; gap: 4px; }
+.key-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3);
+  font-weight: 800; font-size: 13px; color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+.tut-text { font-size: 12px; font-weight: 700; color: var(--rim); opacity: 0.95; }
 
 /* Collection & Wardrobe Chamber */
 .col-hero {
@@ -1708,27 +2375,41 @@ export const UI_CSS = `
 .focus-chip { background: rgba(255,255,255,0.06); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
 
 /* Responsive Adaptations */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
+  .world-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .grid-lvls { grid-template-columns: repeat(5, 1fr); max-width: 720px; margin: 0 auto; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
   .ach-grid { grid-template-columns: 1fr 1fr; }
-  .world-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .world-grid { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
   .cos-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
   .grid-lvls { grid-template-columns: repeat(5, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .grid-lvls { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .lvl { min-height: 74px; border-radius: 18px; }
 }
 
 @media (max-width: 480px) {
   .world-grid { grid-template-columns: 1fr; }
   .cos-grid { grid-template-columns: repeat(2, 1fr); }
-  .grid-lvls { grid-template-columns: repeat(4, 1fr); }
+  .grid-lvls { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .lvl { min-height: 70px; border-radius: 16px; padding: 8px 4px 6px; }
+  .lvl-num { font-size: 15px; }
   .intro-focus-grid { grid-template-columns: 1fr; }
   .topbar h2 { font-size: 18px; }
+  .star-chip { padding: 4px 8px; font-size: 12px; }
 }
 
-@media (max-height: 520px) and (orientation: landscape) {
+@media (max-height: 540px) and (orientation: landscape) {
   .logo { font-size: 24px; }
   .lede { display: none; }
   .btn { padding: 9px 14px; }
-  .world-poster, .poster-svg { height: 110px; }
-  .grid-lvls { grid-template-columns: repeat(6, 1fr); }
+  .world-poster, .poster-svg { aspect-ratio: 21 / 9; }
+  .grid-lvls { grid-template-columns: repeat(5, 1fr); max-width: 600px; margin: 0 auto; }
+  .lvl { min-height: 56px; }
   .hint { bottom: 8%; font-size: 12px; padding: 6px 14px; }
   .intro-stage { height: 90px; }
 }

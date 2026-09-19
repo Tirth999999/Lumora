@@ -145,7 +145,8 @@ export class Game {
   }
 
   bootSession(level, extra) {
-    this.session = new Session(level);
+    const spd = this.save.data.settings?.speed || 1.0;
+    this.session = new Session(level, spd);
     this.effects.clear();
     this.completing = false;
     this.failT = 0;
@@ -228,6 +229,9 @@ export class Game {
 
   setSetting(k, v) {
     this.save.data.settings[k] = v;
+    if (k === "speed" && this.session) {
+      this.session.setSpeedMultiplier(v);
+    }
     if (k === "quality") {
       this.save.data.settings.qualityManual = true;
       this.effects = createEffects(QUALITY_PRESETS[v] || QUALITY_PRESETS.medium);
@@ -284,7 +288,28 @@ export class Game {
     const p = this.cellXY(s.fx, s.fy);
     this.effects.burst(p.x, p.y, this.save.data.equipped.burst === "burst-constellation" ? 48 : 28, 70);
     const quiet = s.level.difficulty?.quiet;
-    const result = this.save.completeLevel(s.level.worldId === "daily" ? "daily" : s.level.worldId, s.level.index, s.moves, quiet);
+    const optimalMoves = s.level.solution?.length || s.level.difficulty?.moves || 3;
+    const target3Star = Math.max(optimalMoves, quiet || Math.ceil(optimalMoves * 1.15));
+    const target2Star = Math.ceil(target3Star * 1.4);
+    let starsEarned = 1;
+    if (s.moves <= target3Star) {
+      starsEarned = 3;
+    } else if (s.moves <= target2Star) {
+      starsEarned = 2;
+    }
+
+    const result = this.save.completeLevel(
+      s.level.worldId === "daily" ? "daily" : s.level.worldId,
+      s.level.index,
+      s.moves,
+      quiet,
+      starsEarned
+    );
+    result.moves = s.moves;
+    result.optimalMoves = optimalMoves;
+    result.target3Star = target3Star;
+    result.target2Star = target2Star;
+    result.starsEarned = starsEarned;
     const world = WORLDS.find((w) => w.id === s.level.worldId);
     if (world && s.level.index >= world.levels - 1) {
       const idx = WORLDS.findIndex((w) => w.id === world.id);
@@ -371,11 +396,13 @@ export class Game {
       STATES.LEVEL_SELECT
     );
     const pal = this.session?.level.palette || this.selectedWorld || "emberwake";
+    const cosState = cosmeticState(this.save);
+    cosState.showHint = !!this.save.data.settings?.hints;
     this.renderer.draw(
       null,
       this.fsm.is(STATES.PLAYING, STATES.PAUSED, STATES.LEVEL_COMPLETE, STATES.WORLD_INTRO) ? this.session : null,
       this.effects,
-      cosmeticState(this.save),
+      cosState,
       pal,
       locked ? null : this.menuPal
     );

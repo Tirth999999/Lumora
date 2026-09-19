@@ -7,6 +7,16 @@ export function syncAchievements(save, ctx) {
   if (n >= 1) grant(save, "first-wake", ctx);
   if (n >= 10) grant(save, "ten-lattices", ctx);
   if (n >= 50) grant(save, "fifty-lattices", ctx);
+  
+  // Star achievements
+  const starsMap = save.data.stars || {};
+  const starValues = Object.values(starsMap);
+  const totalStars = starValues.reduce((acc, v) => acc + (v || 0), 0);
+  const hasThreeStar = starValues.some((v) => v >= 3);
+  if (hasThreeStar) grant(save, "first-3star", ctx);
+  if (totalStars >= 25) grant(save, "star-collector", ctx);
+  if (totalStars >= 75) grant(save, "star-master", ctx);
+
   WORLDS.forEach((w) => {
     if (worldProgress(c, w.id) >= w.levels) grant(save, `world-${w.id}`, ctx);
   });
