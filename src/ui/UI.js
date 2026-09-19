@@ -45,10 +45,10 @@ export class UI {
     const pal = levelOrWorld?.paletteResolved
       ? levelOrWorld.paletteResolved
       : getPalette(
-          typeof levelOrWorld === "string"
-            ? { palette: levelOrWorld, index: 0, seed: 1 }
-            : levelOrWorld || { palette: "emberwake", index: 0, seed: 1 }
-        );
+        typeof levelOrWorld === "string"
+          ? { palette: levelOrWorld, index: 0, seed: 1 }
+          : levelOrWorld || { palette: "emberwake", index: 0, seed: 1 }
+      );
     this.applyPalette(pal);
   }
 
@@ -173,9 +173,10 @@ export class UI {
             <span class="world-count-badge ${isComplete ? "complete" : unlocked ? "active" : "locked"}">${unlocked ? (isComplete ? "✓ Restored" : `${done}/${w.levels}`) : "Locked"}</span>
           </div>
           <p class="world-tagline">${w.tagline}</p>
-          <div class="world-progress-track">
-            ${unlocked ? `<i class="world-fill" style="width:${pct}%;background:${w.hue}"></i>` : `<span class="sleeping">Locked Sector</span>`}
-          </div>
+          ${unlocked ?
+          `<div class="world-progress-track"><i class="world-fill" style="width:${pct}%;background:${w.hue}"></i></div>` :
+          `<span class="sleeping">Locked Sector</span>`
+        }
         </div>
       </button>`;
     }).join("");
@@ -883,7 +884,7 @@ function worldPoster(w) {
   const id = w.id;
   const h = w.hue;
   const motif = POSTER[id] || POSTER.emberwake;
-  return `<svg viewBox="0 0 320 180" class="poster-svg" preserveAspectRatio="xMidYMid slice">
+  return `<svg viewBox="0 0 320 180" class="poster-svg" preserveAspectRatio="xMidYMin slice">
     <defs>
       <linearGradient id="sky-${id}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="${motif.top}"/>
@@ -915,8 +916,6 @@ function worldPoster(w) {
     <rect x="0" y="90" width="320" height="90" fill="url(#mist-${id})"/>
     <!-- Cinematic Vignette Rim -->
     <rect width="320" height="180" fill="url(#vg-${id})"/>
-    <!-- Bottom Cinematic Title Plate -->
-    <rect x="0" y="140" width="320" height="40" fill="rgba(6,4,10,0.75)"/>
   </svg>`;
 }
 
@@ -1354,8 +1353,8 @@ export const UI_CSS = `
 .world-card:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,0,0,0.45); }
 .world-card.completed { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
 .world-card.locked { opacity: 0.55; cursor: not-allowed; }
-.world-poster { height: 160px; overflow: hidden; background: #06040a; position: relative; }
-.poster-svg { width: 100%; height: 160px; display: block; }
+.world-poster { aspect-ratio: 16 / 9; overflow: hidden; background: #06040a; position: relative; }
+.poster-svg { width: 100%; height: 100%; display: block; }
 .world-meta { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
 .world-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .world-name-group { display: flex; flex-direction: column; gap: 2px; }
