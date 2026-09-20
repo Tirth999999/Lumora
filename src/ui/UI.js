@@ -206,7 +206,6 @@ export class UI {
           ${gleamChip(save.gleams)}
         </div>
       </div>
-      <p class="lede slim">Select an atmospheric realm to awaken its sleeping lattices.</p>
       <div class="cards world-grid">${cards}</div>
     </div>`;
 
@@ -1295,35 +1294,35 @@ const POSTER = {
 
 function lumoraBrandEmblem() {
   return `<div class="brand-emblem" aria-hidden="true">
-    <svg viewBox="0 0 100 100" class="brand-mascot-svg">
+    <svg viewBox="0 20 100 100" class="brand-mascot-svg">
       <defs>
         <radialGradient id="emblemGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="var(--rim, #ffd0a0)" stop-opacity="0.6"/>
-          <stop offset="60%" stop-color="var(--accent, #ff9a4a)" stop-opacity="0.2"/>
-          <stop offset="100%" stop-color="transparent"/>
+          <stop offset="0%" stop-color="var(--rim, #ffd0a0)" stop-opacity="0.6"></stop>
+          <stop offset="60%" stop-color="var(--accent, #ff9a4a)" stop-opacity="0.2"></stop>
+          <stop offset="100%" stop-color="transparent"></stop>
         </radialGradient>
         <radialGradient id="wispBody" cx="38%" cy="32%" r="55%">
-          <stop offset="0%" stop-color="#ffffff"/>
-          <stop offset="35%" stop-color="#fff0d0"/>
-          <stop offset="70%" stop-color="var(--accent, #ff9a4a)"/>
-          <stop offset="100%" stop-color="var(--accent-deep, #d45a28)"/>
+          <stop offset="0%" stop-color="#ffffff"></stop>
+          <stop offset="35%" stop-color="#fff0d0"></stop>
+          <stop offset="70%" stop-color="var(--accent, #ff9a4a)"></stop>
+          <stop offset="100%" stop-color="var(--accent-deep, #d45a28)"></stop>
         </radialGradient>
       </defs>
-      <ellipse cx="50" cy="50" rx="42" ry="16" fill="none" stroke="var(--rim, #ffd0a0)" stroke-width="1.8" stroke-dasharray="8 4" opacity="0.6" transform="rotate(-15 50 50)"/>
-      <circle cx="50" cy="50" r="44" fill="url(#emblemGlow)"/>
-      <ellipse cx="38" cy="24" rx="7" ry="14" fill="#ffd0a0" transform="rotate(-20 38 24)"/>
-      <ellipse cx="38" cy="24" rx="3.5" ry="9" fill="#fff5ea" transform="rotate(-20 38 24)"/>
-      <ellipse cx="62" cy="24" rx="7" ry="14" fill="#ffd0a0" transform="rotate(20 62 24)"/>
-      <ellipse cx="62" cy="24" rx="3.5" ry="9" fill="#fff5ea" transform="rotate(20 62 24)"/>
-      <ellipse cx="50" cy="54" rx="26" ry="29" fill="url(#wispBody)"/>
-      <ellipse cx="43" cy="42" rx="8" ry="4" fill="#ffffff" opacity="0.6" transform="rotate(-25 43 42)"/>
-      <circle cx="43" cy="54" r="3.2" fill="#180e14"/>
-      <circle cx="57" cy="54" r="3.2" fill="#180e14"/>
-      <circle cx="44.2" cy="52.8" r="1.1" fill="#ffffff"/>
-      <circle cx="58.2" cy="52.8" r="1.1" fill="#ffffff"/>
-      <path d="M48,60 Q50,62.5 52,60" fill="none" stroke="var(--accent-deep, #d45a28)" stroke-width="1.4" stroke-linecap="round"/>
-      <polygon points="18,34 20,38 24,40 20,42 18,46 16,42 12,40 16,38" fill="#ffeaa0" opacity="0.85"/>
-      <polygon points="82,48 83.5,51 86.5,52.5 83.5,54 82,57 80.5,54 77.5,52.5 80.5,51" fill="#ffeaa0" opacity="0.85"/>
+      <ellipse cx="50" cy="53" rx="33" ry="12" fill="none" stroke="var(--rim, #ffd0a0)" stroke-width="1.8" stroke-dasharray="8 4" opacity="0.6" transform="rotate(-15 50 50)"></ellipse>
+      <circle cx="50" cy="50" r="35" fill="url(#emblemGlow)"></circle>
+      <ellipse cx="38" cy="35" rx="5" ry="10" fill="#ffd0a0" transform="rotate(-20 38 24)"></ellipse>
+      <ellipse cx="38" cy="35" rx="2.5" ry="6" fill="#fff5ea" transform="rotate(-20 38 24)"></ellipse>
+      <ellipse cx="62" cy="35" rx="5" ry="10" fill="#ffd0a0" transform="rotate(20 62 24)"></ellipse>
+      <ellipse cx="62" cy="35" rx="2.5" ry="6" fill="#fff5ea" transform="rotate(20 62 24)"></ellipse>
+      <ellipse cx="50" cy="54" rx="18" ry="19" fill="url(#wispBody)"></ellipse>
+      <ellipse cx="43" cy="42" rx="8" ry="4" fill="#ffffff" opacity="0.6" transform="rotate(-25 43 42)"></ellipse>
+      <circle cx="43" cy="54" r="3.2" fill="#180e14"></circle>
+      <circle cx="57" cy="54" r="3.2" fill="#180e14"></circle>
+      <circle cx="44.2" cy="52.8" r="1.1" fill="#ffffff"></circle>
+      <circle cx="58.2" cy="52.8" r="1.1" fill="#ffffff"></circle>
+      <path d="M48,60 Q50,62.5 52,60" fill="none" stroke="var(--accent-deep, #d45a28)" stroke-width="1.4" stroke-linecap="round"></path>
+      <polygon points="18,34 20,38 24,40 20,42 18,46 16,42 12,40 16,38" fill="#ffeaa0" opacity="0.85"></polygon>
+      <polygon points="82,48 83.5,51 86.5,52.5 83.5,54 82,57 80.5,54 77.5,52.5 80.5,51" fill="#ffeaa0" opacity="0.85"></polygon>
     </svg>
   </div>`;
 }
@@ -1727,14 +1726,14 @@ export const UI_CSS = `
 }
 
 .menu { justify-content: center; align-items: center; }
-.brand { text-align: center; margin-bottom: 12px; }
+.brand { text-align: center; margin-bottom: px; }
 
 .logo {
   font-family: "Fraunces", Georgia, serif;
   font-size: clamp(34px, 9vw, 56px);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  margin: 12px 0 0;
+  margin: -150px 0 0;
   font-weight: 700;
   background: linear-gradient(180deg, #ffffff, var(--rim));
   -webkit-background-clip: text;
@@ -1795,7 +1794,7 @@ export const UI_CSS = `
 .row .btn { flex: 1; min-width: 0; }
 
 .btn {
-  appearance: none; border: 0; border-radius: 20px; padding: 14px 18px;
+  appearance: none; border: 0; border-radius: 20px; padding: 10px 18px;
   font: inherit; font-weight: 700; color: #1a1420; background: #f0e6d6;
   cursor: pointer; text-align: center;
   box-shadow: 0 4px 14px rgba(0,0,0,0.25);
@@ -1822,7 +1821,7 @@ export const UI_CSS = `
 
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: 0 0 auto; margin-bottom: 4px; }
 .topbar.abs { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 16px; }
-.topbar h2 { margin: 0; font-size: clamp(18px, 4.8vw, 22px); letter-spacing: 0.04em; font-family: "Fraunces", Georgia, serif; }
+.topbar h2 { margin: 0; margin-left:13%; font-size: clamp(18px, 4.8vw, 22px); letter-spacing: 0.04em; font-family: "Fraunces", Georgia, serif; }
 
 .topbar-right {
   display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;

@@ -66,21 +66,21 @@ export const QUALITY = {
 };
 
 export const WORLDS = [
-  { id: "emberwake", name: "Emberwake", tagline: "Warm stone learning to glow", levels: 10, intro: "restore", hue: "#ff9a4a" },
-  { id: "tidecrest", name: "Tidecrest", tagline: "Cool glass and drinking wells", levels: 10, intro: "well", hue: "#48d8d0" },
-  { id: "duskveil", name: "Duskveil", tagline: "Seals sleep until called", levels: 10, intro: "seal", hue: "#c890f0" },
-  { id: "canopy", name: "Canopy", tagline: "Drift vanes turn the glide", levels: 10, intro: "vane", hue: "#a8e050" },
-  { id: "starloom", name: "Starloom", tagline: "Foldgates stitch the dark", levels: 10, intro: "fold", hue: "#88a8ff" },
-  { id: "cinderfall", name: "Cinderfall", tagline: "Ash plates crumble behind you", levels: 10, intro: "fracture", hue: "#ff7040" },
-  { id: "mirrorfen", name: "Mirrorfen", tagline: "Silver faces reverse the wake", levels: 10, intro: "mirror", hue: "#9ee0d0" },
-  { id: "zephyrrow", name: "Zephyrrow", tagline: "Winds only blow one way", levels: 10, intro: "oneway", hue: "#7ec8ff" },
-  { id: "brasslock", name: "Brasslock", tagline: "Golden rings bar the path", levels: 10, intro: "seal", hue: "#e0b050" },
-  { id: "hollowmere", name: "Hollowmere", tagline: "Rifts tear the still water", levels: 10, intro: "rift", hue: "#c07090" },
-  { id: "prismarch", name: "Prismarch", tagline: "Beacons demand a true order", levels: 10, intro: "sequence", hue: "#f0a0ff" },
-  { id: "auroraloom", name: "Auroraloom", tagline: "A hidden heart in the folds", levels: 10, intro: "heart", hue: "#80e0ff" },
-  { id: "rootspire", name: "Rootspire", tagline: "Dense crystal forests", levels: 10, intro: "pillar", hue: "#6ecf7a" },
-  { id: "stormglass", name: "Stormglass", tagline: "One-way gales over rifts", levels: 10, intro: "storm", hue: "#6aa8ff" },
-  { id: "duskforge", name: "Duskforge", tagline: "Ash plates and tearing rifts", levels: 10, intro: "forge", hue: "#ff6080" },
+  { id: "emberwake", name: "Emberwake", tagline: "", levels: 10, intro: "restore", hue: "#ff9a4a" },
+  { id: "tidecrest", name: "Tidecrest", tagline: "", levels: 10, intro: "well", hue: "#48d8d0" },
+  { id: "duskveil", name: "Duskveil", tagline: "", levels: 10, intro: "seal", hue: "#c890f0" },
+  { id: "canopy", name: "Canopy", tagline: "", levels: 10, intro: "vane", hue: "#a8e050" },
+  { id: "starloom", name: "Starloom", tagline: "", levels: 10, intro: "fold", hue: "#88a8ff" },
+  { id: "cinderfall", name: "Cinderfall", tagline: "", levels: 10, intro: "fracture", hue: "#ff7040" },
+  { id: "mirrorfen", name: "Mirrorfen", tagline: "", levels: 10, intro: "mirror", hue: "#9ee0d0" },
+  { id: "zephyrrow", name: "Zephyrrow", tagline: "", levels: 10, intro: "oneway", hue: "#7ec8ff" },
+  { id: "brasslock", name: "Brasslock", tagline: "", levels: 10, intro: "seal", hue: "#e0b050" },
+  { id: "hollowmere", name: "Hollowmere", tagline: "", levels: 10, intro: "rift", hue: "#c07090" },
+  { id: "prismarch", name: "Prismarch", tagline: "", levels: 10, intro: "sequence", hue: "#f0a0ff" },
+  { id: "auroraloom", name: "Auroraloom", tagline: "", levels: 10, intro: "heart", hue: "#80e0ff" },
+  { id: "rootspire", name: "Rootspire", tagline: "", levels: 10, intro: "pillar", hue: "#6ecf7a" },
+  { id: "stormglass", name: "Stormglass", tagline: "", levels: 10, intro: "storm", hue: "#6aa8ff" },
+  { id: "duskforge", name: "Duskforge", tagline: "", levels: 10, intro: "forge", hue: "#ff6080" },
 ];
 
 /** Short visual briefings shown the first time a world is entered. */
