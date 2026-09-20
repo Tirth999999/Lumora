@@ -711,7 +711,7 @@ export class UI {
 
           <div class="modal-actions">
             <button class="btn primary ${canAfford ? "" : "disabled"}" id="buyyes" ${canAfford ? "" : "disabled"}>
-              ${gemSvg(18)} Unlock Item
+               Unlock Item
             </button>
             <button class="btn ghost" id="buyno">Not Now</button>
           </div>
@@ -1699,6 +1699,8 @@ export const UI_CSS = `
 }
 
 .buy-overlay{
+    margin-top: 4%;
+
     display: flex;
     align-content: center;
     justify-content: center;
@@ -1754,10 +1756,10 @@ export const UI_CSS = `
 
 .eyebrow { margin: 0; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.7; font-weight: 700; }
 .lede { opacity: 0.86; max-width: 34ch; margin: 8px auto; line-height: 1.5; font-size: 15px; }
-.lede.slim { margin: 0 0 4px; max-width: none; text-align: left; opacity: 0.76; font-size: 13px; }
+.lede.slim { margin: 0 0 4px; max-width: none; text-align: center; opacity: 0.76; font-size: 13px; }
 .muted, .tiny { opacity: 0.68; font-size: 13px; }
 .top-spacer { width: 44px; }
-
+.confirm-modal h2{margin:0px}
 /* Proper Gem Chip */
 .gleam-chip {
   display: inline-flex; align-items: center; gap: 8px;
@@ -2299,8 +2301,12 @@ export const UI_CSS = `
 /* Purchase Confirmation Modal */
 .confirm-modal { width: min(30vw); text-align: center; overflow-y:auto; overflow-x:hidden;}
 .buy-preview-stage {
-  width: 100%; height: 90px; border-radius: 18px; overflow: hidden;
-  margin: 4px 0 8px; border: 1px solid rgba(255,255,255,0.12);
+    width: 8vw;
+    height: 16vh;
+    border-radius: 18px;
+    margin: 4px 0 8px;
+    margin-left: 40%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 .buy-preview { height: 100%; width: 100%; }
 .badge-type {
@@ -2308,7 +2314,7 @@ export const UI_CSS = `
   text-transform: uppercase; color: var(--rim); margin-bottom: 6px;
 }
 .price-breakdown {
-  background: rgba(0,0,0,0.3); border-radius: 16px; padding: 14px;
+  background: rgba(0,0,0,0.3); border-radius: 16px; padding: 5px 14px;
   display: flex; flex-direction: column; gap: 8px; margin: 12px 0;
   border: 1px solid rgba(255,255,255,0.08);
 }
@@ -2319,7 +2325,7 @@ export const UI_CSS = `
 .price-row b.negative { color: #ff7080; }
 .insufficient-alert {
   background: rgba(220, 40, 60, 0.2); border: 1px solid rgba(220, 40, 60, 0.4);
-  color: #ff9ca8; padding: 8px 12px; border-radius: 12px; font-size: 12px; margin-bottom: 10px;
+  color: #ff9ca8; padding: 8px 12px; border-radius: 12px; font-size: 12px; margin-bottom: 0px;
 }
 .modal-actions { display: flex; flex-direction: column; gap: 8px; }
 
