@@ -2,229 +2,336 @@ import { WORLDS, OBJECTIVE } from "../config/game.js";
 import { hashString } from "../core/math.js";
 import { generateValidated, tutorialLevel } from "../generation/generator.js";
 
-function ramp(i, easy, hard) {
-  return easy + Math.round((hard - easy) * (i / 9));
+class WorldConfigBuilder {
+  constructor(index) {
+    this.index = index;
+  }
+  ramp(easy, hard) {
+    return easy + Math.round((hard - easy) * (this.index / 9));
+  }
+  build() {
+    throw new Error("Must implement build()");
+  }
 }
 
-const WORLD_CURVE = {
-  emberwake: (i) => ({
-    w: i < 3 ? 6 : i < 7 ? 7 : 8,
-    h: i < 3 ? 5 : i < 7 ? 6 : 7,
-    pillars: 1 + Math.floor(i / 4),
-    objective: OBJECTIVE.RESTORE,
-    mechanics: ["restore"],
-    minMoves: i < 2 ? 1 : ramp(i, 2, 5),
-    maxMoves: ramp(i, 10, 18),
-    minTiles: i < 4 ? 6 : 8,
-    maxTiles: ramp(i, 14, 24),
-    density: 0.42 + i * 0.02,
-    maxScore: i < 4 ? 90 : 180,
-  }),
-  tidecrest: (i) => ({
-    w: 7 + (i > 6 ? 1 : 0),
-    h: 6 + (i > 4 ? 1 : 0),
-    pillars: 2 + Math.floor(i / 5),
-    wells: 1 + (i > 5 ? 1 : 0),
-    rifts: i > 3 ? 1 : 0,
-    objective: i % 5 === 4 ? OBJECTIVE.SAFE : i % 3 === 2 ? OBJECTIVE.WELLS : OBJECTIVE.RESTORE,
-    mechanics: ["well", i > 3 ? "rift" : "restore"],
-    riftsFail: true,
-    minMoves: ramp(i, 2, 6),
-    maxMoves: ramp(i, 12, 20),
-    minTiles: 8,
-    maxTiles: ramp(i, 16, 26),
-    density: 0.48 + i * 0.018,
-  }),
-  duskveil: (i) => ({
-    w: 7 + (i > 7 ? 1 : 0),
-    h: 7,
-    pillars: 2 + (i > 5 ? 1 : 0),
-    anchors: 2 + (i > 6 ? 1 : 0),
-    seals: 1,
-    objective: i % 2 === 0 ? OBJECTIVE.SEQUENCE : OBJECTIVE.RESTORE,
-    mechanics: ["seal", "sequence"],
-    minMoves: ramp(i, 3, 7),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 18, 26),
-    density: 0.5 + i * 0.015,
-  }),
-  canopy: (i) => ({
-    w: 7 + (i > 6 ? 1 : 0),
-    h: 7,
-    pillars: 2 + Math.floor(i / 5),
-    vanes: 1 + (i > 3 ? 1 : 0) + (i > 7 ? 1 : 0),
-    objective: OBJECTIVE.RESTORE,
-    mechanics: ["vane", i > 5 ? "well" : "vane"],
-    wells: i > 5 ? 1 : 0,
-    minMoves: ramp(i, 3, 7),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 18, 26),
-    density: 0.52 + i * 0.014,
-  }),
-  starloom: (i) => ({
-    w: 7 + (i > 5 ? 1 : 0),
-    h: 7 + (i > 8 ? 1 : 0),
-    pillars: 2 + (i > 4 ? 1 : 0),
-    objective: i % 4 === 3 ? OBJECTIVE.FOLD : OBJECTIVE.RESTORE,
-    mechanics: ["fold", i > 3 ? "vane" : "fold"],
-    vanes: i > 3 ? 1 : 0,
-    minMoves: ramp(i, 3, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 18, 28),
-    density: 0.5 + i * 0.016,
-  }),
-  cinderfall: (i) => ({
-    w: 7 + (i > 5 ? 1 : 0),
-    h: 6 + (i > 3 ? 1 : 0),
-    pillars: 2 + Math.floor(i / 4),
-    fractures: 2 + Math.floor(i / 3),
-    objective: OBJECTIVE.RESTORE,
-    mechanics: ["fracture"],
-    minMoves: ramp(i, 3, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 16, 24),
-    density: 0.5 + i * 0.015,
-  }),
-  mirrorfen: (i) => ({
-    w: 7 + (i > 6 ? 1 : 0),
-    h: 7,
-    pillars: 2 + (i > 4 ? 1 : 0),
-    mirrors: 1 + (i > 3 ? 1 : 0) + (i > 7 ? 1 : 0),
-    objective: OBJECTIVE.RESTORE,
-    mechanics: ["mirror", i > 5 ? "vane" : "mirror"],
-    vanes: i > 5 ? 1 : 0,
-    minMoves: ramp(i, 3, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 18, 26),
-    density: 0.5 + i * 0.014,
-  }),
-  zephyrrow: (i) => ({
-    w: 7 + (i > 5 ? 1 : 0),
-    h: 7,
-    pillars: 2,
-    oneways: 2 + Math.floor(i / 3),
-    objective: OBJECTIVE.RESTORE,
-    mechanics: ["oneway"],
-    minMoves: ramp(i, 3, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 18, 26),
-    density: 0.52 + i * 0.014,
-  }),
-  hollowmere: (i) => ({
-    w: 7,
-    h: 6 + (i > 4 ? 1 : 0),
-    pillars: 2 + (i > 6 ? 1 : 0),
-    rifts: 1 + (i > 3 ? 1 : 0) + (i > 7 ? 1 : 0),
-    wells: i > 5 ? 1 : 0,
-    objective: OBJECTIVE.SAFE,
-    mechanics: ["rift", i > 5 ? "well" : "rift"],
-    riftsFail: true,
-    minMoves: ramp(i, 3, 7),
-    maxMoves: ramp(i, 14, 20),
-    minTiles: 8,
-    maxTiles: ramp(i, 16, 24),
-    density: 0.48 + i * 0.016,
-  }),
-  prismarch: (i) => ({
-    w: 7 + (i > 6 ? 1 : 0),
-    h: 7,
-    pillars: 2 + (i > 5 ? 1 : 0),
-    anchors: 2 + (i > 4 ? 1 : 0),
-    objective: OBJECTIVE.SEQUENCE,
-    mechanics: ["sequence"],
-    minMoves: ramp(i, 3, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 18, 26),
-    density: 0.5 + i * 0.015,
-  }),
-  brasslock: (i) => ({
-    w: 7 + (i > 6 ? 1 : 0),
-    h: 7,
-    pillars: 2 + (i > 4 ? 1 : 0),
-    seals: 1 + (i > 4 ? 1 : 0),
-    objective: OBJECTIVE.RESTORE,
-    mechanics: ["seal"],
-    minMoves: ramp(i, 3, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 18, 26),
-    density: 0.5 + i * 0.015,
-  }),
-  auroraloom: (i) => ({
-    w: 7 + (i > 5 ? 1 : 0),
-    h: 7,
-    pillars: 2,
-    objective: OBJECTIVE.RESTORE,
-    mechanics: ["heart", "fold", i > 5 ? "vane" : "fold"],
-    vanes: i > 5 ? 1 : 0,
-    minMoves: ramp(i, 4, 8),
-    maxMoves: ramp(i, 16, 24),
-    minTiles: 10,
-    maxTiles: ramp(i, 18, 28),
-    density: 0.52 + i * 0.014,
-  }),
-  rootspire: (i) => ({
-    w: 7 + (i > 4 ? 1 : 0),
-    h: 7 + (i > 7 ? 1 : 0),
-    pillars: 3 + Math.floor(i / 3),
-    objective: OBJECTIVE.RESTORE,
-    mechanics: ["restore"],
-    minMoves: ramp(i, 4, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 10,
-    maxTiles: ramp(i, 18, 28),
-    density: 0.56 + i * 0.012,
-  }),
-  stormglass: (i) => ({
-    w: 7 + (i > 6 ? 1 : 0),
-    h: 7,
-    pillars: 2,
-    oneways: 2 + Math.floor(i / 4),
-    rifts: 1 + (i > 4 ? 1 : 0),
-    vanes: i > 6 ? 1 : 0,
-    objective: OBJECTIVE.SAFE,
-    mechanics: ["oneway", "rift", i > 6 ? "vane" : "rift"],
-    riftsFail: true,
-    minMoves: ramp(i, 3, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 16, 24),
-    density: 0.5 + i * 0.014,
-  }),
-  duskforge: (i) => ({
-    w: 7 + (i > 5 ? 1 : 0),
-    h: 7,
-    pillars: 2 + (i > 6 ? 1 : 0),
-    fractures: 2 + Math.floor(i / 4),
-    rifts: 1 + (i > 5 ? 1 : 0),
-    objective: OBJECTIVE.SAFE,
-    mechanics: ["fracture", "rift"],
-    riftsFail: true,
-    minMoves: ramp(i, 4, 8),
-    maxMoves: ramp(i, 14, 22),
-    minTiles: 9,
-    maxTiles: ramp(i, 16, 24),
-    density: 0.5 + i * 0.014,
-  }),
-};
+class EmberwakeBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 9 + (this.index > 3 ? 1 : 0) + (this.index > 7 ? 2 : 0),
+      h: 9 + (this.index > 3 ? 1 : 0) + (this.index > 7 ? 2 : 0),
+      pillars: 2 + Math.floor(this.index / 4),
+      objective: OBJECTIVE.RESTORE,
+      mechanics: ["restore"],
+      minMoves: Math.max(10, this.ramp(10, 15)),
+      maxMoves: this.ramp(20, 30),
+      minTiles: 16 + (this.index > 3 ? 4 : 0),
+      maxTiles: this.ramp(25, 45),
+      density: 0.42 + this.index * 0.02,
+      maxScore: this.ramp(150, 300),
+    };
+  }
+}
+
+class TidecrestBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 6 ? 2 : 0),
+      h: 9 + (this.index > 4 ? 2 : 0),
+      pillars: 3 + Math.floor(this.index / 5),
+      wells: 1 + (this.index > 5 ? 1 : 0),
+      rifts: this.index > 3 ? 1 : 0,
+      objective: this.index % 5 === 4 ? OBJECTIVE.SAFE : this.index % 3 === 2 ? OBJECTIVE.WELLS : OBJECTIVE.RESTORE,
+      mechanics: ["well", this.index > 3 ? "rift" : "restore"],
+      riftsFail: true,
+      minMoves: Math.max(10, this.ramp(10, 16)),
+      maxMoves: this.ramp(22, 30),
+      minTiles: 18,
+      maxTiles: this.ramp(26, 46),
+      density: 0.48 + this.index * 0.018,
+    };
+  }
+}
+
+class DuskveilBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 7 ? 2 : 0),
+      h: 10,
+      pillars: 3 + (this.index > 5 ? 1 : 0),
+      anchors: 3 + (this.index > 6 ? 1 : 0),
+      seals: 1 + (this.index > 7 ? 1 : 0),
+      objective: this.index % 2 === 0 ? OBJECTIVE.SEQUENCE : OBJECTIVE.RESTORE,
+      mechanics: ["seal", "sequence"],
+      minMoves: Math.max(10, this.ramp(11, 17)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(28, 46),
+      density: 0.5 + this.index * 0.015,
+    };
+  }
+}
+
+class CanopyBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 6 ? 2 : 0),
+      h: 10,
+      pillars: 3 + Math.floor(this.index / 5),
+      vanes: 2 + (this.index > 3 ? 1 : 0) + (this.index > 7 ? 1 : 0),
+      objective: OBJECTIVE.RESTORE,
+      mechanics: ["vane", this.index > 5 ? "well" : "vane"],
+      wells: this.index > 5 ? 1 : 0,
+      minMoves: Math.max(10, this.ramp(11, 17)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(28, 46),
+      density: 0.52 + this.index * 0.014,
+    };
+  }
+}
+
+class StarloomBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 5 ? 2 : 0),
+      h: 10 + (this.index > 8 ? 2 : 0),
+      pillars: 3 + (this.index > 4 ? 1 : 0),
+      objective: this.index % 4 === 3 ? OBJECTIVE.FOLD : OBJECTIVE.RESTORE,
+      mechanics: ["fold", this.index > 3 ? "vane" : "fold"],
+      vanes: this.index > 3 ? 1 : 0,
+      minMoves: Math.max(10, this.ramp(11, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(28, 48),
+      density: 0.5 + this.index * 0.016,
+    };
+  }
+}
+
+class CinderfallBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 5 ? 2 : 0),
+      h: 9 + (this.index > 3 ? 2 : 0),
+      pillars: 3 + Math.floor(this.index / 4),
+      fractures: 3 + Math.floor(this.index / 3),
+      objective: OBJECTIVE.RESTORE,
+      mechanics: ["fracture"],
+      minMoves: Math.max(10, this.ramp(11, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(26, 44),
+      density: 0.5 + this.index * 0.015,
+    };
+  }
+}
+
+class MirrorfenBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 6 ? 2 : 0),
+      h: 10,
+      pillars: 3 + (this.index > 4 ? 1 : 0),
+      mirrors: 2 + (this.index > 3 ? 1 : 0) + (this.index > 7 ? 1 : 0),
+      objective: OBJECTIVE.RESTORE,
+      mechanics: ["mirror", this.index > 5 ? "vane" : "mirror"],
+      vanes: this.index > 5 ? 1 : 0,
+      minMoves: Math.max(10, this.ramp(11, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(28, 46),
+      density: 0.5 + this.index * 0.014,
+    };
+  }
+}
+
+class ZephyrrowBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 5 ? 2 : 0),
+      h: 10,
+      pillars: 3,
+      oneways: 3 + Math.floor(this.index / 3),
+      objective: OBJECTIVE.RESTORE,
+      mechanics: ["oneway"],
+      minMoves: Math.max(10, this.ramp(11, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(28, 46),
+      density: 0.52 + this.index * 0.014,
+    };
+  }
+}
+
+class HollowmereBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10,
+      h: 9 + (this.index > 4 ? 2 : 0),
+      pillars: 3 + (this.index > 6 ? 1 : 0),
+      rifts: 2 + (this.index > 3 ? 1 : 0) + (this.index > 7 ? 1 : 0),
+      wells: this.index > 5 ? 1 : 0,
+      objective: OBJECTIVE.SAFE,
+      mechanics: ["rift", this.index > 5 ? "well" : "rift"],
+      riftsFail: true,
+      minMoves: Math.max(10, this.ramp(11, 17)),
+      maxMoves: this.ramp(24, 30),
+      minTiles: 18,
+      maxTiles: this.ramp(26, 44),
+      density: 0.48 + this.index * 0.016,
+    };
+  }
+}
+
+class PrismarchBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 6 ? 2 : 0),
+      h: 10,
+      pillars: 3 + (this.index > 5 ? 1 : 0),
+      anchors: 3 + (this.index > 4 ? 1 : 0),
+      objective: OBJECTIVE.SEQUENCE,
+      mechanics: ["sequence"],
+      minMoves: Math.max(10, this.ramp(11, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(28, 46),
+      density: 0.5 + this.index * 0.015,
+    };
+  }
+}
+
+class BrasslockBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 6 ? 2 : 0),
+      h: 10,
+      pillars: 3 + (this.index > 4 ? 1 : 0),
+      seals: 2 + (this.index > 4 ? 1 : 0),
+      objective: OBJECTIVE.RESTORE,
+      mechanics: ["seal"],
+      minMoves: Math.max(10, this.ramp(11, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(28, 46),
+      density: 0.5 + this.index * 0.015,
+    };
+  }
+}
+
+class AuroraloomBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 5 ? 2 : 0),
+      h: 10,
+      pillars: 3,
+      objective: OBJECTIVE.RESTORE,
+      mechanics: ["heart", "fold", this.index > 5 ? "vane" : "fold"],
+      vanes: this.index > 5 ? 1 : 0,
+      minMoves: Math.max(10, this.ramp(12, 18)),
+      maxMoves: this.ramp(26, 34),
+      minTiles: 20,
+      maxTiles: this.ramp(28, 48),
+      density: 0.52 + this.index * 0.014,
+    };
+  }
+}
+
+class RootspireBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 4 ? 2 : 0),
+      h: 10 + (this.index > 7 ? 2 : 0),
+      pillars: 4 + Math.floor(this.index / 3),
+      objective: OBJECTIVE.RESTORE,
+      mechanics: ["restore"],
+      minMoves: Math.max(10, this.ramp(12, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 20,
+      maxTiles: this.ramp(28, 48),
+      density: 0.56 + this.index * 0.012,
+    };
+  }
+}
+
+class StormglassBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 6 ? 2 : 0),
+      h: 10,
+      pillars: 3,
+      oneways: 3 + Math.floor(this.index / 4),
+      rifts: 2 + (this.index > 4 ? 1 : 0),
+      vanes: this.index > 6 ? 1 : 0,
+      objective: OBJECTIVE.SAFE,
+      mechanics: ["oneway", "rift", this.index > 6 ? "vane" : "rift"],
+      riftsFail: true,
+      minMoves: Math.max(10, this.ramp(11, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(26, 44),
+      density: 0.5 + this.index * 0.014,
+    };
+  }
+}
+
+class DuskforgeBuilder extends WorldConfigBuilder {
+  build() {
+    return {
+      w: 10 + (this.index > 5 ? 2 : 0),
+      h: 10,
+      pillars: 3 + (this.index > 6 ? 1 : 0),
+      fractures: 3 + Math.floor(this.index / 4),
+      rifts: 2 + (this.index > 5 ? 1 : 0),
+      objective: OBJECTIVE.SAFE,
+      mechanics: ["fracture", "rift"],
+      riftsFail: true,
+      minMoves: Math.max(10, this.ramp(12, 18)),
+      maxMoves: this.ramp(24, 32),
+      minTiles: 19,
+      maxTiles: this.ramp(26, 44),
+      density: 0.5 + this.index * 0.014,
+    };
+  }
+}
+
+class LevelConfigFactory {
+  static create(worldId, index) {
+    const builders = {
+      emberwake: EmberwakeBuilder,
+      tidecrest: TidecrestBuilder,
+      duskveil: DuskveilBuilder,
+      canopy: CanopyBuilder,
+      starloom: StarloomBuilder,
+      cinderfall: CinderfallBuilder,
+      mirrorfen: MirrorfenBuilder,
+      zephyrrow: ZephyrrowBuilder,
+      hollowmere: HollowmereBuilder,
+      prismarch: PrismarchBuilder,
+      brasslock: BrasslockBuilder,
+      auroraloom: AuroraloomBuilder,
+      rootspire: RootspireBuilder,
+      stormglass: StormglassBuilder,
+      duskforge: DuskforgeBuilder,
+    };
+    
+    const BuilderClass = builders[worldId] || EmberwakeBuilder;
+    const builder = new BuilderClass(index);
+    const config = builder.build();
+    
+    config.worldId = worldId;
+    config.index = index;
+    config.palette = worldId;
+    config.title = `${WORLDS.find((w) => w.id === worldId)?.name || "Lattice"} ${index + 1}`;
+    config.radius = 2.4 + index * 0.04; // increased slightly for larger maps
+    config.maxStates = 120000; // Increased massively for 10-30 step maps to prevent solver timeouts
+    
+    return config;
+  }
+}
 
 export function levelParams(worldId, index) {
-  const curve = WORLD_CURVE[worldId] || WORLD_CURVE.emberwake;
-  const p = curve(index);
-  p.worldId = worldId;
-  p.index = index;
-  p.palette = worldId;
-  p.title = `${WORLDS.find((w) => w.id === worldId)?.name || "Lattice"} ${index + 1}`;
-  p.radius = 1.9 + index * 0.04;
-  p.maxStates = 18000;
-  return p;
+  return LevelConfigFactory.create(worldId, index);
 }
 
 export function getLevel(worldId, index) {

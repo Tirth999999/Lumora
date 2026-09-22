@@ -180,7 +180,7 @@ export function generateCandidate(seed, params) {
   }
 
   let walk = countWalk(grid);
-  if (walk < (params.minTiles || 8)) carveSnake(grid, rng, 18);
+  if (walk < (params.minTiles || 8)) carveSnake(grid, rng, Math.max(30, (params.minTiles || 8) * 1.5));
   walk = countWalk(grid);
   if (walk > (params.maxTiles || 22)) {
     // trim random shards at edges
